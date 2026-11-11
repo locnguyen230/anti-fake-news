@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đề tài 07 · Phát hiện tin giả</title>
+  <link rel="stylesheet" href="slides.css">
+  <script src="slides.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <span>ĐỀ TÀI 07</span>
+    <nav aria-label="Phần trình bày">
+      <a href="#01">Định nghĩa</a>
+      <a href="#03">Kiến trúc</a>
+      <a href="#05">Dữ liệu và mô hình</a>
+    </nav>
+  </header>
+
+  <main aria-label="Bài trình bày">
+    <section class="slide cover" id="01" aria-labelledby="title-01">
+      <div class="kicker">01 / ĐỊNH NGHĨA ĐỀ TÀI</div>
+      <h1 id="title-01" tabindex="-1">Phát hiện tin giả<br><em>từ bài viết và ảnh</em></h1>
+      <p class="lead">Ảnh đại diện đóng góp thế nào vào việc phân loại bài viết?</p>
+      <div class="cover-meta"><span>Định nghĩa đề tài</span><span>Thiết kế kiến trúc</span></div>
+    </section>
+
+    <section class="slide" id="02" aria-labelledby="title-02">
+      <div class="kicker">02 / ĐỊNH NGHĨA ĐỀ TÀI</div>
+      <h2 id="title-02" tabindex="-1">Bài toán và phạm vi</h2>
+      <p class="lead">Hỗ trợ người đọc, biên tập viên và người kiểm duyệt ưu tiên bài cần xác minh.</p>
+      <ol class="flow flow-three" aria-label="Đầu vào, xử lý và đầu ra">
+        <li><small>ĐẦU VÀO</small><strong>Một bài viết</strong><span>Tiêu đề, thân bài và một ảnh đại diện.</span></li>
+        <li><small>XỬ LÝ</small><strong>Mô hình phân loại</strong><span>Kết hợp tín hiệu từ văn bản và ảnh trên máy người dùng.</span></li>
+        <li><small>ĐẦU RA</small><strong>Dự đoán tin giả hoặc tin thật</strong><span>Điểm nghi vấn giúp người dùng quyết định bài nào cần đối chiếu nguồn và bằng chứng.</span></li>
+      </ol>
+      <p class="note">Demo dùng tiện ích Chromium với giao diện tiếng Việt. Ngôn ngữ bài viết cần chốt vì hai tài liệu nguồn ghi khác nhau.</p>
+    </section>
+
+    <section class="slide" id="03" aria-labelledby="title-03">
+      <div class="kicker">03 / THIẾT KẾ KIẾN TRÚC</div>
+      <h2 id="title-03" tabindex="-1">Luồng dữ liệu khi phân tích bài</h2>
+      <ol class="flow" aria-label="Luồng từ trang bài viết đến kết quả">
+        <li><small>01 · TRANG WEB</small><strong>Bài viết đang xem</strong><span>Tiêu đề, thân bài và ảnh ứng viên.</span></li>
+        <li><small>02 · TIỆN ÍCH</small><strong>Trang phân tích</strong><span>Người dùng sửa nội dung và xác nhận một ảnh trước khi gửi.</span></li>
+        <li><small>03 · MÁY CÁ NHÂN</small><strong>Dịch vụ FastAPI</strong><span>Kiểm tra văn bản và tệp ảnh, sau đó gọi mô hình.</span></li>
+        <li><small>04 · MÁY CÁ NHÂN</small><strong>Mô hình phân loại</strong><span>Tính điểm nghi vấn và dự đoán nhãn.</span></li>
+      </ol>
+      <div class="return-flow" aria-label="Dịch vụ cục bộ trả kết quả về trang phân tích">
+        <strong>Trang phân tích</strong><span class="return-arrow" aria-hidden="true">⟵</span><span class="return-label">Nhãn và điểm nghi vấn</span><span class="return-arrow" aria-hidden="true">⟵</span><strong>Dịch vụ cục bộ</strong>
+      </div>
+      <p class="note">Nếu trang hoặc ảnh bị chặn, người dùng có thể dán thân bài và tải ảnh từ máy. Tiện ích giữ bản nhập khi dịch vụ gặp lỗi.</p>
+    </section>
+
+    <section class="slide" id="04" aria-labelledby="title-04">
+      <div class="kicker">04 / THIẾT KẾ KIẾN TRÚC</div>
+      <h2 id="title-04" tabindex="-1">Hai nhánh đặc trưng hội tụ</h2>
+      <div class="fusion" role="group" aria-label="Đặc trưng văn bản và ảnh hội tụ vào mô hình phân loại">
+        <div class="branches">
+          <div class="branch"><strong>Tiêu đề và thân bài</strong><span class="diagram-arrow" aria-hidden="true">→</span><div><small>TF-IDF</small><span>Đặc trưng từ và cụm từ</span></div></div>
+          <div class="branch"><strong>Một ảnh đại diện</strong><span class="diagram-arrow" aria-hidden="true">→</span><div><small>CLIP ViT-B/32</small><span>Đặc trưng thị giác</span></div></div>
+        </div>
+        <div class="join" aria-hidden="true"></div>
+        <div class="model"><strong>Ghép đặc trưng</strong><span>Hồi quy logistic</span></div>
+        <span class="diagram-arrow fusion-arrow" aria-hidden="true">→</span>
+        <div class="prediction"><strong>Kết quả</strong><span>Nhãn và điểm nghi vấn</span></div>
+      </div>
+      <p class="note">Dịch vụ tải sẵn bộ mã hóa ảnh và bộ phân loại khi khởi động. Demo suy luận trên CPU.</p>
+    </section>
+
+    <section class="slide" id="05" aria-labelledby="title-05">
+      <div class="kicker">05 / THIẾT KẾ KIẾN TRÚC</div>
+      <h2 id="title-05" tabindex="-1">Luồng dữ liệu huấn luyện</h2>
+      <ol class="flow" aria-label="Luồng từ nguồn dữ liệu đến gói mô hình">
+        <li><small>01 · NGUỒN</small><strong>FakeNewsNet</strong><span>Dùng nhãn và URL để khôi phục bài viết và ảnh.</span></li>
+        <li><small>02 · CHUẨN BỊ</small><strong>Mẫu hợp lệ</strong><span>Giữ mẫu đủ nhãn, thân bài và ảnh. Rà trùng và gom bài cùng sự kiện.</span></li>
+        <li><small>03 · CHIA TẬP</small><strong>Train, validation, test</strong><span>Chia theo nhóm để bài trùng hoặc cùng sự kiện không lọt qua các tập.</span></li>
+        <li><small>04 · BÀN GIAO</small><strong>Gói mô hình</strong><span>Đóng gói bộ tạo đặc trưng, bộ phân loại và ngưỡng để dịch vụ cục bộ sử dụng.</span></li>
+      </ol>
+      <p class="note">Mục tiêu 200–500 bài hợp lệ. Ưu tiên PolitiFact và bổ sung GossipCop khi cần.</p>
+    </section>
+
+    <section class="slide" id="06" aria-labelledby="title-06">
+      <div class="kicker">06 / THIẾT KẾ KIẾN TRÚC</div>
+      <h2 id="title-06" tabindex="-1">Các cấu hình đối chứng</h2>
+      <table>
+        <thead><tr><th scope="col">Cấu hình</th><th scope="col">Đầu vào mô hình</th><th scope="col">Vai trò</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Chỉ văn bản</th><td>Đặc trưng TF-IDF</td><td>Mốc đối chiếu</td></tr>
+          <tr><th scope="row">Chỉ ảnh</th><td>Đặc trưng CLIP</td><td>Đo tín hiệu từ ảnh</td></tr>
+          <tr><th scope="row">Kết hợp</th><td>Đặc trưng TF-IDF và CLIP</td><td>Đo thay đổi khi thêm ảnh</td></tr>
+        </tbody>
+      </table>
+      <p class="lead">Cả ba dùng hồi quy logistic và cùng tập chia. Demo dùng cấu hình kết hợp.</p>
+      <p class="note">Tài liệu gốc <a href="../DEFINE.md">DEFINE.md</a> và <a href="../DESIGN.md">DESIGN.md</a>.</p>
+    </section>
+  </main>
+
+  <footer class="controls" hidden>
+    <progress aria-label="Tiến độ trình bày"></progress>
+    <div class="control-row">
+      <span class="hint">Dùng phím ← → để chuyển trang</span>
+      <button type="button" id="previous" aria-label="Trang trước">←</button>
+      <output id="position" aria-live="polite"></output>
+      <button type="button" id="next" aria-label="Trang sau">→</button>
+    </div>
+  </footer>
+</body>
+</html>
