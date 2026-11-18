@@ -1,0 +1,35 @@
+# Local configuration (examples remain versioned).
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+htmlcov/
+
+# Private inputs and generated model assets; retain source code and manifests.
+data/raw/
+data/private/
+raw_data/
+private_data/
+artifacts/
+weights/
+checkpoints/
+cache/
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.h5
+*.hdf5
+
