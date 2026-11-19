@@ -1,4 +1,4 @@
-"""DI seam only. No mock predictions, artifact loader, or readiness state machine."""
+"""Shared Predictor protocol and DI seam; state belongs to inference_adapter."""
 
 from typing import Protocol
 
@@ -25,7 +25,7 @@ class Predictor(Protocol):
 
 
 def get_predictor(request: Request) -> Predictor:
-    """Future lifecycle integration can install a Predictor in app.state.predictor."""
+    """Return the lifecycle-installed adapter or an explicit dependency override."""
     predictor: Predictor | None = getattr(request.app.state, "predictor", None)
     if predictor is None:
         raise ModelNotReadyError

@@ -8,6 +8,8 @@ def test_defaults_require_no_credentials_or_artifacts():
     settings = Settings(_env_file=None)
     assert (settings.host, settings.port) == ("127.0.0.1", 8000)
     assert settings.demo_token is None
+    assert settings.environment == "demo"
+    assert settings.predictor_mode == "real"
     assert settings.extension_origin is None
     assert settings.model_artifact_path == REPO_ROOT / "artifacts" / "model"
     assert settings.max_request_bytes > IMAGE_MAX_BYTES
@@ -81,3 +83,22 @@ def test_launcher_reports_config_failure_without_input(monkeypatch):
         launcher.main()
     assert "private-invalid-value" not in str(error.value)
     assert str(error.value).startswith("Invalid AFN configuration")
+
+
+@pytest.mark.parametrize("environment", ["dev", "test"])
+def test_mock_requires_both_environment_and_mode(monkeypatch, environment):
+    monkeypatch.setenv("AFN_ENVIRONMENT", environment)
+    assert Settings(_env_file=None).predictor_mode == "real"
+    monkeypatch.setenv("AFN_PREDICTOR_MODE", "mock")
+    assert Settings(_env_file=None).predictor_mode == "mock"
+
+
+@pytest.mark.parametrize("overrides", [
+    {"predictor_mode": "mock"},
+    {"environment": "demo", "predictor_mode": "mock"},
+    {"environment": "production", "predictor_mode": "mock"},
+    {"environment": "dev", "predictor_mode": "auto"},
+])
+def test_invalid_or_unsafe_modes_fail_startup_configuration(overrides):
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, **overrides)

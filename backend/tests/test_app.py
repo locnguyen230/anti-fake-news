@@ -21,7 +21,7 @@ def test_lifecycle_starts_without_artifacts_and_cleans_up(tmp_path):
         health = client.get("/health")
         assert health.status_code == 200
         assert health.json() == {
-            "service_status": "ok", "model_ready": False, "contract_version": "0.1.0"
+            "service_status": "ok", "model_ready": False, "contract_version": "0.1.1"
         }
         assert str(missing) not in health.text
         assert "test-only-secret" not in health.text
@@ -110,9 +110,11 @@ def test_openapi_describes_only_implemented_behavior():
         schema = client.get("/openapi.json").json()
     operation = schema["paths"]["/predict"]["post"]
     assert "503" in operation["responses"]
-    assert "200" not in operation["responses"]
+    assert "200" in operation["responses"]  # Explicit dev/test mock only.
+    assert "400" in operation["responses"]
     assert "422" not in operation["responses"]
-    assert "requestBody" not in operation
+    assert "multipart/form-data" in operation["requestBody"]["content"]
+    assert operation["requestBody"]["required"] is False  # Real mode reads nothing.
 
 
 def test_app_instances_do_not_share_provider_state():

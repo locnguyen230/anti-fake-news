@@ -21,6 +21,8 @@ pydantic_core==2.50.4
 Pygments==2.21.0
 pytest==8.4.2
 python-dotenv==1.2.4
+# Mock-only multipart bridge; retains Python 3.10 compatibility.
+python-multipart==0.0.32
 starlette==1.7.0
 tomli==2.5.0
 truststore==0.10.5

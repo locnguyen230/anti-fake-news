@@ -1,10 +1,11 @@
-# Predictor interface v0.1.0 — AFN-007 / AFN-008
+# Giao diện Predictor v0.1.1 — AFN-007 / AFN-008 / AFN-009
 
-Status: **proposed**, ML and Extension review pending. No model or complete mock
-Predictor is implemented. `backend/app/predictor.py` is the typed DI seam;
-`backend/app/schemas.py` defines shared input/result constraints.
+Trạng thái: **đề xuất (proposed)**, đang chờ ML và Extension review. Chưa có mô hình thật nào được triển khai.
+AFN-009 bổ sung mock dev/test rõ ràng và adapter trạng thái suy luận.
+`backend/app/predictor.py` vẫn là điểm nối định kiểu dùng chung (typed seam); chữ ký
+input/output của nó không thay đổi. `backend/app/schemas.py` định nghĩa các ràng buộc dùng chung.
 
-## Proposed Python boundary
+## Ranh giới Python đề xuất
 
 ```python
 class PredictorInput(PredictFormFields):
@@ -14,92 +15,110 @@ class Predictor(Protocol):
     def predict(self, inputs: PredictorInput) -> PredictionResult: ...
 ```
 
-`PredictFormFields` contains `request_id: UUID`, `title: str | None` (<=500 code
-points) and `text: str` (<=50,000 code points before trim, nonblank after trim).
-An HTTP upload is a separate multipart file part; it is never a JSON byte string
-or image URL. Backend eventually validates the transport, then constructs
-`PredictorInput`. The bytes field requires nonempty `bytes`, but its schema alone
-does **not** verify MIME, byte/pixel ceilings or decodability.
+`PredictFormFields` chứa `request_id: UUID`, `title: str | None` (<=500 điểm mã Unicode
+/ code points) và `text: str` (<=50.000 code points trước khi cắt khoảng trắng trim, không rỗng sau khi trim).
+Tệp tải lên qua HTTP là một phần file multipart riêng biệt; không bao giờ là chuỗi byte JSON
+hay URL hình ảnh. Tầng vận chuyển (transport) Backend thật sẽ xác thực dữ liệu vận chuyển, sau đó khởi tạo
+`PredictorInput`. Trường bytes yêu cầu `bytes` không rỗng, nhưng chỉ riêng schema của nó thì
+**không** xác thực MIME, giới hạn trần byte/pixel hay khả năng giải mã ảnh. Cầu nối mock (mock bridge)
+kiểm tra các trường, sự hiện diện của tệp/bytes không rỗng và trần kích thước byte ảnh sau khi parse,
+nhưng không giải mã hay xác thực ảnh. Đây không phải là bộ validator cho môi trường production.
 
-**Proposed image choice: validated encoded JPEG/PNG bytes.** This avoids a Pillow,
-NumPy, Torch or CLIP dependency in the foundation. Backend #23 must verify contents,
-dimensions (<=20,000,000 pixels), <=10 MiB size, and define EXIF/RGB handling.
-ML owns model-specific image transforms. Passing validated encoded bytes may
-require ML to decode again; ML must review whether to replace this boundary with
-a decoded RGB object. Exact decode/orientation/normalization ownership must be
-agreed before #23/#37. Changing it requires a versioned interface update, not an
-undocumented switch. No decode is implemented here.
+**Đề xuất lựa chọn dạng ảnh: các byte JPEG/PNG đã mã hóa và được xác thực.** Điều này tránh phụ thuộc
+Pillow, NumPy, Torch hay CLIP trong phần nền tảng (foundation). Backend #23 phải xác thực nội dung,
+kích thước (<=20.000.000 pixel), dung lượng <=10 MiB, và định nghĩa cách xử lý EXIF/RGB.
+ML chịu trách nhiệm về các biến đổi ảnh đặc thù của mô hình. Việc truyền các byte đã mã hóa hợp lệ có thể
+yêu cầu ML phải giải mã lại; ML cần review xem liệu có nên thay thế ranh giới này bằng một đối tượng RGB đã giải mã hay không.
+Trách nhiệm cụ thể về decode/hướng ảnh (orientation)/chuẩn hóa (normalization) phải được thống nhất
+trước #23/#37. Việc thay đổi yêu cầu cập nhật phiên bản giao diện (versioned interface update), không phải
+thay đổi ngầm định. Hiện tại chưa có mã giải mã nào được triển khai ở đây.
 
-Pass optional title and trimmed body separately. Backend only validates transport
-length/blankness; it does not concatenate or truncate. ML owns consistent
-training/inference concatenation, tokenization, the proposed 1,500-word ceiling
-and how title words count. ML sets `text_truncated` when preprocessing truncates.
-The English input scope and exact preprocessing are pending ML approval.
-Do not use request_id, URLs, filenames or other provenance as model features.
+Truyền tiêu đề (title) tùy chọn và phần thân (body) đã trim riêng biệt. Backend chỉ xác thực độ dài/tính không rỗng
+của tầng vận chuyển; không nối chuỗi (concatenate) hay cắt ngắn văn bản (truncate). ML chịu trách nhiệm
+nối chuỗi nhất quán giữa huấn luyện/suy luận, tokenization, mức trần 1.500 từ được đề xuất và cách tính từ trong tiêu đề.
+ML thiết lập `text_truncated` khi tiền xử lý thực hiện cắt ngắn văn bản.
+Phạm vi đầu vào tiếng Anh và quy trình tiền xử lý chính xác đang chờ ML phê duyệt.
+Không sử dụng request_id, URL, tên tệp hoặc nguồn gốc xuất xứ khác làm đặc trưng (features) cho mô hình.
 
-## Output and failures
+## Đầu ra và xử lý lỗi
 
-`PredictionResult` contains:
+`PredictionResult` bao gồm:
 
-| Field | Type / responsibility |
+| Trường | Kiểu dữ liệu / Trách nhiệm |
 | --- | --- |
-| `label` | Literal `fake` or `real`, ML threshold and class mapping |
-| `fake_score` | Finite float in [0,1], not a calibrated probability |
-| `model_version` | Nonblank string from actual compatible model metadata |
-| `model_id` | Nonblank string identifying the actual model configuration |
-| `text_truncated` | Strict bool describing ML preprocessing |
+| `label` | Literal `fake` hoặc `real`, ngưỡng ML và ánh xạ phân lớp |
+| `fake_score` | Số thực hữu hạn trong [0,1], không phải xác suất đã hiệu chuẩn (calibrated probability) |
+| `model_version` | Chuỗi không rỗng từ metadata của mô hình tương thích thực tế |
+| `model_id` | Chuỗi không rỗng định danh cấu hình mô hình thực tế |
+| `text_truncated` | Kiểu bool nghiêm ngặt mô tả trạng thái tiền xử lý của ML |
 
-Backend adds the safely parsed request UUID and monotonic nonnegative integer
-`processing_time_ms` around the Predictor call to build `PredictResponse`.
-Timing includes ML preprocessing but excludes artifact loading and HTTP transport.
-Do not supply invented IDs, timing or results when there is no loaded model.
+Backend bổ sung UUID của request đã được parse an toàn và số nguyên không âm đơn điệu
+`processing_time_ms` xung quanh lời gọi Predictor để xây dựng `PredictResponse`.
+Thời gian xử lý bao gồm tiền xử lý của ML nhưng loại trừ việc tải artifact và vận chuyển HTTP.
+Không cung cấp ID, thời gian hoặc kết quả tự bịa đặt khi chưa có mô hình nào được nạp.
 
-`ModelNotReadyError` means absent, unavailable or incompatible model/artifacts.
-Backend maps it to sanitized 503 `model_not_ready`, never its exception text.
-Other programming/inference failures must not be mislabeled as invalid input or
-converted into fake successes. Further internal-error policy belongs to model
-integration; the current route never invokes inference.
+`ModelNotReadyError` thể hiện mô hình/artifact bị thiếu, không khả dụng hoặc không tương thích.
+Backend ánh xạ lỗi này thành mã 503 đã được làm sạch `model_not_ready`, tuyệt đối không trả về văn bản ngoại lệ gốc.
+Adapter cũng đánh dấu provider của nó là `error` khi khởi tạo/gọi hàm/đầu ra không hợp lệ thất bại
+và chỉ đưa ra `ModelNotReadyError`; không bao giờ tự động thử lại (retry) ngầm định
+hay thay thế bằng đầu ra mock. Những lỗi này không được phân loại là đầu vào không hợp lệ (invalid input).
+Chính sách xử lý lỗi cho mô hình thật vẫn cần ML review trước khi tích hợp. Không có thông điệp ngoại lệ
+hay traceback nào được lưu giữ trong endpoint health công khai hoặc payload phản hồi.
 
-## Lifecycle and dependency injection
+## Vòng đời và tiêm phụ thuộc (Lifecycle & Dependency Injection)
 
-`create_app(settings=None)` resolves configuration during ASGI lifespan startup,
-sets `app.state.predictor = None`, and clears state on shutdown. It never probes
-artifact files or imports ML libraries. `get_predictor(request)` returns the
-installed provider or raises `ModelNotReadyError`. Future lifecycle integration
-can set `app.state.predictor`; consumers can use FastAPI
-`app.dependency_overrides[get_predictor]` during focused tests.
+`create_app(settings=None)` giải quyết cấu hình trong quá trình khởi động lifespan của ASGI
+và tạo một `InferenceAdapter` cho mỗi lifespan tại `app.state.inference_adapter`.
+Chế độ thực tế (real mode) mặc định sẽ để trạng thái là `not_loaded`, với `app.state.predictor = None`.
+Mock dev/test tường minh sẽ khởi tạo `MockPredictor` và chỉ cài đặt adapter vào
+`app.state.predictor` nếu ở trạng thái ready. Lỗi khởi động sẽ khiến dịch vụ vẫn chạy
+nhưng trạng thái health báo lỗi (error-state) và `/predict` trả về 503. Quá trình tắt (shutdown) sẽ xóa các tham chiếu
+provider và đặt lại về `not_loaded`; chưa có trình dọn dẹp tài nguyên/loader thực tế nào được triển khai.
 
-Current `/predict` resolves this seam but unconditionally reports unavailable,
-even when overridden. This avoids enabling inference before transport safety is
-implemented. `/health` reports `model_ready: false` regardless of injection or
-configured paths; merely supplying an object is not proof of readiness.
-There is no full mock or ready/loading/failed state machine (#9).
+`get_predictor(request)` giữ lại điểm hook DI hiện có. Endpoint health đọc adapter
+thông qua `get_inference_adapter(request)`, ánh xạ tính sẵn sàng vào trường boolean JSON hiện có
+và đưa mode/state vào header phản hồi. Gán trực tiếp vào vị trí `app.state.predictor` cũ
+sẽ không làm thay đổi trạng thái health. Các bài kiểm thử có thể ghi đè (override) tường minh một trong hai
+phụ thuộc. Chỉ các thành phần quản lý vòng đời mới được gọi `initialize(factory)`;
+một factory thực tế trong tương lai phải kiểm tra tính tương thích/làm nóng (warm-up) trước khi trả về.
 
-Proposed future model startup: ML supplies a compatible package; Backend loads
-once, validates metadata and warms up before reporting readiness (#37/#38).
-Backend owns resource lifetime/shutdown; ML defines resource release and thread
-safety requirements. A synchronous CPU Predictor must run off the async event
-loop. Worker count, serialization/thread safety and cancellation need ML review
-before integration; this foundation starts one Uvicorn worker and performs no
-inference. Client timeout does not prove cancellation of a running prediction.
+Các trạng thái gồm `not_loaded`, `ready`, `error`; xem [dev-mock.md](dev-mock.md) để biết
+các chuyển thái (transitions). Endpoint `/predict` ở real-mode luôn trả về 503 trước khi đọc body,
+kể cả khi đã override provider, cho đến khi công việc vận chuyển/tích hợp hoàn tất.
+Cầu nối mock dev/test gọi Predictor đồng bộ tách khỏi vòng lặp sự kiện (event loop),
+phản hồi lại UUID đã parse và đo thời gian xử lý. Kết quả cố định của nó có các ID
+giả lập rõ ràng và không thực hiện tiền xử lý, kiểm tra ảnh hay đánh giá tính chân thật của bài báo.
 
-## Ownership, dependencies and versioning
+Quy trình khởi động mô hình đề xuất trong tương lai: ML cung cấp package tương thích; Backend nạp
+một lần, xác thực metadata và warm-up trước khi báo cáo trạng thái sẵn sàng (#37/#38).
+Backend quản lý vòng đời tài nguyên/shutdown; ML định nghĩa các yêu cầu giải phóng tài nguyên và an toàn luồng (thread safety).
+Predictor CPU đồng bộ phải chạy tách biệt khỏi event loop bất đồng bộ. Số lượng worker,
+tuần tự hóa / an toàn luồng và hủy tác vụ (cancellation) cần ML review trước khi tích hợp;
+nền tảng này khởi chạy một Uvicorn worker và không thực hiện suy luận thực tế.
+Việc client hết thời gian chờ (timeout) không đảm bảo hủy bỏ được một tiến trình dự đoán đang chạy.
 
-- **Backend:** HTTP/form parsing, token/policy, streamed byte limits, #23 image
-  verification, correlation, timing, safe errors, DI and service lifecycle.
-- **ML:** training/artifacts, model preprocessing and transforms, label mapping,
-  threshold, result metadata, compatible ML dependency versions.
-- **Extension:** `analyze.js` upload, client ID/timeout, stale-result handling and
-  presentation; `service-worker.js` does not call `/predict`.
+## Phân định trách nhiệm, phụ thuộc và quản lý phiên bản
 
-The initial requirements pin the resolved Python 3.10 backend and test packages.
-There are no existing ML dependency manifests in this checkout, so **ML
-compatibility is unconfirmed**. Do not add speculative Torch/CLIP/scikit-learn
-pins or change training files. ML must supply their Python version and dependency
-manifest before a combined environment can be tested.
+- **Backend:** Phân tích cú pháp HTTP/form, token/chính sách, giới hạn luồng byte, xác thực
+  ảnh theo #23, tương quan (correlation), đo thời gian, xử lý lỗi an toàn, DI và vòng đời dịch vụ.
+- **ML:** Huấn luyện/artifacts, tiền xử lý và biến đổi mô hình, ánh xạ nhãn,
+  ngưỡng, metadata kết quả, các phiên bản phụ thuộc ML tương thích.
+- **Extension:** `analyze.js` tải lên, client ID/timeout, xử lý và hiển thị kết quả cũ/hết hạn;
+  `service-worker.js` không gọi `/predict`.
 
-Contract v0.1.0 is shared with `docs/api-contract.md`. Changes to the signature,
-image representation, fields, preprocessing meaning or errors require coordinated
-docs/schema/fixture updates and notice to Backend, ML and Extension before
-adoption. Breaking changes increment the minor version while pre-1.0; compatible
-clarifications increment the patch version. No approval is implied by versioning.
+Các yêu cầu ban đầu ghim các package backend và test đã được phân giải trên Python 3.10;
+AFN-009 chỉ thêm `python-multipart==0.0.32` cho cầu nối mock. Các bài kiểm thử hiện tại
+sử dụng Python 3.13.1 vì bản cài đặt cục bộ 3.10 trước đó không còn.
+Không có bản kê khai phụ thuộc (dependency manifest) ML nào trong bản checkout này, do đó **tính
+tương thích ML vẫn chưa được xác nhận**. Không thêm các bản ghim Torch/CLIP/scikit-learn
+mang tính suy đoán hoặc thay đổi các tệp huấn luyện. ML phải cung cấp phiên bản Python và manifest
+phụ thuộc của họ trước khi có thể kiểm thử môi trường kết hợp.
+
+Hợp đồng v0.1.1 được chia sẻ với `docs/api-contract.md` và các fixture API đã được đánh phiên bản.
+Bản vá bổ sung hành vi phát triển dạng opt-in cùng các header mode/state trong khi vẫn giữ nguyên
+tập hợp các trường JSON và chữ ký Predictor. Điều này không ngụ ý sự phê duyệt từ phía consumer.
+Những thay đổi đối với chữ ký, biểu diễn hình ảnh, các trường dữ liệu, ý nghĩa của tiền xử lý
+hoặc các lỗi phát sinh đều yêu cầu cập nhật đồng bộ tài liệu/schema/fixture và thông báo cho
+Backend, ML và Extension trước khi áp dụng. Các thay đổi phá vỡ tương thích (breaking changes)
+sẽ tăng phiên bản minor khi ở giai đoạn pre-1.0; các điểm làm rõ tương thích sẽ tăng phiên bản patch.
+Việc đánh phiên bản không ngụ ý bất kỳ sự phê duyệt nào.
