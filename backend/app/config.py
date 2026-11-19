@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -24,12 +24,20 @@ class Settings(BaseSettings):
     # Restrict the supported launcher to loopback while local auth is deferred.
     host: Literal["127.0.0.1", "::1", "localhost"] = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
+    environment: Literal["demo", "dev", "test"] = "demo"
+    predictor_mode: Literal["real", "mock"] = "real"
     demo_token: SecretStr | None = Field(default=None, repr=False)
     extension_origin: str | None = Field(
         default=None, pattern=r"^chrome-extension://[a-p]{32}$"
     )
     model_artifact_path: Path = Field(default=REPO_ROOT / "artifacts" / "model", repr=False)
     max_request_bytes: int = Field(default=12 * 1024 * 1024, gt=IMAGE_MAX_BYTES)
+
+    @model_validator(mode="after")
+    def mock_requires_dev_or_test(self) -> "Settings":
+        if self.predictor_mode == "mock" and self.environment not in ("dev", "test"):
+            raise ValueError("Mock requires AFN_ENVIRONMENT=dev or test")
+        return self
 
     @field_validator("demo_token", "extension_origin", mode="before")
     @classmethod

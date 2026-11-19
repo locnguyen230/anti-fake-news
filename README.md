@@ -1,12 +1,14 @@
 # Anti-fake-news
 
-Local FastAPI foundation for **AFN-007 / AFN-008 only**. Python **3.10** is the
+Local FastAPI foundation and dev mock for **AFN-007 / AFN-008 / AFN-009**. Python **3.10** is the
 initial dependency baseline (tested patch version is recorded in the execution
 report). ML environment compatibility and reviewer approval remain pending.
 
-`GET /health` reports service availability and `model_ready: false`.
-`POST /predict` is a disabled skeleton: it always returns HTTP 503 without
-parsing uploads or producing predictions. This is not an integrated demo.
+By default, `GET /health` reports `model_ready: false` and `POST /predict`
+returns HTTP 503 without reading uploads. An explicit dev/test mock can return
+synthetic responses for UI development; see [dev-mock.md](docs/dev-mock.md).
+This is not a real-model demo. The current verification used Python 3.13.1;
+ML environment agreement is still pending.
 
 ## Setup and run
 
@@ -55,13 +57,16 @@ in [the contract](docs/api-contract.md).
 | --- | --- |
 | `AFN_HOST` | `127.0.0.1`; loopback only |
 | `AFN_PORT` | `8000`; 1–65535 |
+| `AFN_ENVIRONMENT` | `demo`; alternatives `dev`, `test` |
+| `AFN_PREDICTOR_MODE` | `real`; `mock` is accepted only in dev/test |
 | `AFN_DEMO_TOKEN` | Unset; secret stored with `SecretStr`, auth deferred to #22 |
 | `AFN_EXTENSION_ORIGIN` | Unset; one `chrome-extension://` origin, enforcement deferred to #38 |
 | `AFN_MODEL_ARTIFACT_PATH` | `<repo>/artifacts/model`; relative values resolve from repo root |
 | `AFN_MAX_REQUEST_BYTES` | Proposed 12 MiB (12,582,912 bytes), must exceed 10 MiB; enforcement deferred to #22 |
 
 An empty token/origin is unconfigured, never an authentication bypass for a
-working prediction endpoint. No token is generated, printed or committed here.
+real prediction endpoint. The explicitly opted-in mock does not enforce tokens;
+use synthetic test content only. No token is generated, printed or committed here.
 No model files are read, even if an artifact path exists. Do not log settings,
 request bodies, credentials, model exceptions or file paths.
 
@@ -75,22 +80,24 @@ cd backend
 ..\.venv\Scripts\python.exe -m pip check
 # Optional: real HTTP smoke on port 8000; stops its own server afterward.
 ..\.venv\Scripts\python.exe tests/smoke_local.py
+..\.venv\Scripts\python.exe tests/smoke_local.py --mode mock
 ```
 
 On Linux/macOS, use `../.venv/bin/python` in these commands. The requirement
 file pins runtime **and test** dependencies, including the resolved transitive
 packages. It intentionally contains no ML packages. Tests cover startup/shutdown,
 environment configuration, no-model behavior, dependency overrides and schema
-boundaries. They do not evaluate a trained model or implement a mock Predictor.
+boundaries, adapter state and synthetic mock responses. They do not evaluate a trained model.
 
 ## Contracts and remaining work
 
-- [HTTP contract v0.1.0](docs/api-contract.md)
-- [Predictor interface v0.1.0](docs/inference-interface.md)
+- [HTTP contract v0.1.1](docs/api-contract.md)
+- [Predictor interface v0.1.1](docs/inference-interface.md)
+- [Explicit dev/test mock and AFN-009 evidence](docs/dev-mock.md)
 - [Execution evidence and review handoff](docs/implementation-issues-7-8.md)
 - Existing project context: [DEFINE.md](DEFINE.md), [DESIGN.md](DESIGN.md)
 
-No implementation of #9, #22, #23, #37, #38 or #39 is included. In particular,
-full authentication, request limits, image decoding, CORS, model loading,
+Full implementation of #22, #23, #37, #38 and #39 remains deferred. In particular,
+full authentication, streaming request limits, image decoding, CORS, model loading,
 warm-up and integration tests remain deferred. The target contract is a proposal
 until Backend, ML and Extension approve it.
