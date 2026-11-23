@@ -92,3 +92,24 @@ test('missing permissions and navigation during extraction switch to manual inpu
   assert.equal(denied.session.text, '');
   assert.equal(await readSession('?session=invalid'), null);
 });
+
+
+test('failed or untrackable analysis tab creation leaves no orphan session', async () => {
+  const original = chrome.tabs.create;
+  const before = [...sessions.keys()].sort();
+  try {
+    chrome.tabs.create = async () => { throw Error('Cannot create analysis tab'); };
+    await click({ id: 7, url: 'chrome://version/' });
+    assert.deepEqual([...sessions.keys()].sort(), before);
+
+    chrome.tabs.create = async () => ({});
+    await click({ id: 7, url: 'chrome://version/' });
+    assert.deepEqual([...sessions.keys()].sort(), before);
+
+    chrome.tabs.create = async tab => ({ ...tab, id: 999 });
+    await click({ id: 7, url: 'chrome://version/' });
+    assert.deepEqual([...sessions.keys()].sort(), before);
+  } finally {
+    chrome.tabs.create = original;
+  }
+});

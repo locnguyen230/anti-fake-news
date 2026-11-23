@@ -55,14 +55,17 @@ async function openAnalysis(tab) {
   if (stored) page.searchParams.set('session', id);
   try {
     const analysisTab = await chrome.tabs.create({ url: page.href });
-    if (stored && Number.isInteger(analysisTab.id)) {
-      // Keep ownership in session storage so removal works after worker suspension.
-      await chrome.storage.session.set({ ['analysis-tab:' + analysisTab.id]: key });
-      try {
-        await chrome.tabs.get(analysisTab.id);
-      } catch {
-        await removeAnalysis(analysisTab.id);
-      }
+    if (!stored) return;
+    if (!Number.isInteger(analysisTab.id)) {
+      await chrome.storage.session.remove(key);
+      return;
+    }
+    // Keep ownership in session storage so removal works after worker suspension.
+    await chrome.storage.session.set({ ['analysis-tab:' + analysisTab.id]: key });
+    try {
+      await chrome.tabs.get(analysisTab.id);
+    } catch {
+      await removeAnalysis(analysisTab.id);
     }
   } catch {
     if (stored) await chrome.storage.session.remove(key);
