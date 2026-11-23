@@ -8,6 +8,26 @@ Chỉ lưu **dữ liệu giả lập tự tạo** phục vụ kiểm thử hợp
 | `qa/v0.1.1/request-valid-fields.json` | QA tự tạo, 23/11/2026 | T06: mẫu cấu trúc trường multipart | Gửi UUID + văn bản + một ảnh hợp lệ; **không** gửi nguyên JSON vào `/predict` |
 | `backend/tests/fixtures/api/v0.1.1/` | Fixture phát triển của Backend có sẵn | Kiểm thử schema/parser/mock | Không chứng minh mô hình suy luận thật |
 
+Các tệp QA bổ sung trong `qa/v0.1.1/`:
+
+- `manifest.json`: danh mục có version, tác giả/nguồn và mục đích của từng fixture.
+- `session-race.json`: hai request UUID, thứ tự phản hồi đảo ngược để thử phiên/tab (T01, T09).
+- `split-policy.json`: quy tắc chia Train/Validation/Test để audit **metadata**, không chứa bất kỳ mẫu Test nghiên cứu nào (T10, T11).
+- `generate_fixtures.py`: sinh ảnh PNG hợp lệ, byte ảnh hỏng, MIME giả, payload >10 MiB và text 50.001 ký tự. Có thể sinh JPEG EXIF orientation=6 nếu đã cài riêng Pillow.
+
+## Chạy thử bộ fixture
+
+Từ thư mục gốc repository:
+
+```bash
+python -m unittest discover -s tests/fixtures/qa -p "test_*.py" -v
+python tests/fixtures/qa/generate_fixtures.py
+# Tùy chọn: cài Pillow trong môi trường QA rồi chạy
+python tests/fixtures/qa/generate_fixtures.py --with-exif
+```
+
+Lệnh sinh dữ liệu mặc định tạo **thư mục tạm mới** và in đường dẫn. Không commit các tệp nhị phân đã sinh. Các bài kiểm thử `unittest` chỉ xác nhận cấu trúc/nguồn gốc/boundary của fixture; **không** gửi API, không chứng minh endpoint hay mô hình đạt yêu cầu.
+
 ## Cách tạo các fixture khác tại máy cục bộ
 
 1. **Văn bản dài:** tạo chuỗi `"a".repeat(50001)` để thử giới hạn 50.000 Unicode code point; thử title dài 501 ký tự. Không cần bài báo thật.
