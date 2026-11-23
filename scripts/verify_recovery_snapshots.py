@@ -11,8 +11,11 @@ SNAPSHOT_COUNTS = (228, 300, 350, 400)
 
 
 def sha256(path):
+    digest = hashlib.sha256()
     with path.open("rb") as file:
-        return hashlib.file_digest(file, "sha256").hexdigest()
+        for block in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def read_checksums(path):
