@@ -1,3 +1,4 @@
+import { createFormState } from './modules/form-state.js';
 import { bindFormValidation } from './modules/form-validation.js';
 import { createImageSelection } from './modules/image-selection.js';
 import { readSession } from './modules/session.js';
@@ -18,8 +19,7 @@ if (session?.url) {
   source.textContent = 'Nguồn: ' + session.url;
   source.hidden = false;
 }
-get('title').value = session?.title ?? '';
-get('text').value = session?.text ?? '';
+const draftState = createFormState({ title: session?.title, text: session?.text });
 
 const upload = get('image-upload');
 const preview = get('image-preview');
@@ -30,12 +30,12 @@ const imageSelection = createImageSelection(({ file, preview: url, message }) =>
   removeImage.hidden = !file;
   if (url) preview.src = url;
   else preview.removeAttribute('src');
-  formState.changed();
+  draftState.set({ image: file });
 });
 
-const formState = bindFormValidation(get('analysis-form'), {
+bindFormValidation(get('analysis-form'), {
   title: get('title'), text: get('text'), image: upload,
-  getImage: () => imageSelection.file, feedback: get('form-status'),
+  state: draftState, feedback: get('form-status'),
 });
 
 upload.addEventListener('change', () => imageSelection.chooseFile(upload.files[0]));

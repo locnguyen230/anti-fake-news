@@ -9,5 +9,4 @@ lại khi nhận request. Preview được giải phóng khi đổi ảnh, bỏ 
 Tệp nằm trong bộ nhớ trang để có thể thử lại; khi đóng hoặc tải lại trang, chọn
 lại ảnh.
 
-Bàn giao cho #26/#27: dùng thuộc tính file của bộ chọn và gửi bytes trong
-multipart. Nghiệm thu cuối còn phối hợp form-state #12 và hợp đồng #8.
+Bàn giao cho #26/#27: module form-state cung cấp get/set/subscribe; bộ chọn chuyển tệp vào state của tab và multipart chỉ gửi bytes. Đối chiếu các quyết định hợp đồng ở #8 và review bàn giao ở #12 trước nghiệm thu.
