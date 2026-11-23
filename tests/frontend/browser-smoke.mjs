@@ -29,7 +29,7 @@ const server = createServer(async (request, response) => {
   }
   try {
     const content = await readFile(join(fixtures, request.url.slice(1)));
-    response.writeHead(200, { 'Content-Type': mediaType }).end(content);
+    response.writeHead(200, { 'Content-Type': mediaType, 'Access-Control-Allow-Origin': '*' }).end(content);
   } catch {
     response.writeHead(500).end();
   }
@@ -87,6 +87,18 @@ try {
   assert.equal(await analysis.locator('#candidates li').count(), 2);
   assert.match(await analysis.locator('#candidates li').first().innerText(), /\/synthetic\.png/u);
   console.log('PASS article DOM, relative images, filtering and activeTab permission');
+  await analysis.locator('#candidates button').first().click();
+  await analysis.waitForFunction(() => document.querySelector('#image-preview').naturalWidth > 0
+    && !document.querySelector('#image-preview').hidden);
+  assert.match(await analysis.locator('#image-status').innerText(), /Đã chọn ảnh/u);
+  await analysis.locator('#candidates button').last().click();
+  await analysis.waitForFunction(() => document.querySelector('#image-status').textContent.includes('Không tải'));
+  assert.equal(await analysis.locator('#image-preview').isHidden(), true);
+  await analysis.locator('#image-upload').setInputFiles(join(fixtures, 'synthetic.png'));
+  await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
+  await analysis.locator('#remove-image').click();
+  assert.equal(await analysis.locator('#image-preview').isHidden(), true);
+  console.log('PASS candidate bytes, manual upload and preview cleanup');
 
   const dynamic = await context.newPage();
   await dynamic.goto(origin + '/dynamic.html');

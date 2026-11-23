@@ -1,3 +1,4 @@
+import { createImageSelection } from './modules/image-selection.js';
 import { readSession } from './modules/session.js';
 
 const get = id => document.getElementById(id);
@@ -19,12 +20,38 @@ if (session?.url) {
 get('title').value = session?.title ?? '';
 get('text').value = session?.text ?? '';
 
+const upload = get('image-upload');
+const preview = get('image-preview');
+const removeImage = get('remove-image');
+const imageSelection = createImageSelection(({ file, preview: url, message }) => {
+  get('image-status').textContent = message;
+  preview.hidden = !file;
+  removeImage.hidden = !file;
+  if (url) preview.src = url;
+  else preview.removeAttribute('src');
+});
+
+upload.addEventListener('change', () => imageSelection.chooseFile(upload.files[0]));
+removeImage.addEventListener('click', () => {
+  upload.value = '';
+  imageSelection.clear();
+  upload.focus();
+});
+addEventListener('pagehide', () => imageSelection.clear());
+
 const candidates = session?.candidateImages ?? [];
 if (candidates.length) {
   const list = get('candidates');
   for (const { url, label } of candidates) {
     const item = document.createElement('li');
-    item.textContent = label ? label + ' · ' + url : url;
+    const choose = document.createElement('button');
+    choose.type = 'button';
+    choose.textContent = label ? label + ' · ' + url : url;
+    choose.addEventListener('click', () => {
+      upload.value = '';
+      imageSelection.chooseCandidate(url);
+    });
+    item.append(choose);
     list.append(item);
   }
   get('image-candidates').hidden = false;
