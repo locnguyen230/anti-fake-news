@@ -119,6 +119,10 @@ try {
     await analysis.locator('#analyze').click();
     await analysis.waitForFunction(() => !document.querySelector('#result').hidden);
     assert.match(await analysis.locator('#result-detail').innerText(), /Giả lập.*dev-mock-not-a-model/u);
+    const detail = await analysis.locator('#result-detail').innerText();
+    assert.match(detail, /fake_score: 0\.42.*chưa hiệu chuẩn/u);
+    assert.match(detail, /phiên bản.*Thời gian xử lý.*Văn bản không bị cắt/u);
+    assert.equal(await analysis.locator('#retry').getAttribute('aria-describedby'), 'analysis-status');
     await analysis.locator('#text').fill(input + ' Changed.');
     assert.equal(await analysis.locator('#result').isHidden(), true);
     await analysis.locator('#text').fill(input);
