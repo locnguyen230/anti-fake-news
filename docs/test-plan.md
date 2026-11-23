@@ -28,7 +28,7 @@ Cập nhật: 23/11/2026. **Đây là kế hoạch kiểm thử, chưa phải k�
 ## 3. Fixture và phân tách dữ liệu
 
 - Fixture tổng hợp do QA quản lý: `tests/fixtures/qa/v0.1.1/`, có [hướng dẫn nguồn gốc](../tests/fixtures/README.md).
-- Registry `manifest.json` nêu nguồn gốc và version của từng mẫu; `session-race.json` và `split-policy.json` giúp bàn giao rõ phiên và chính sách split. Có bộ sinh fixture cục bộ cho text dài/ảnh hỏng/sai MIME/ảnh quá lớn và EXIF tùy chọn.
+- Registry `manifest.json` nêu nguồn gốc và version của từng mẫu; `session-race.json` và `split-policy.json` giúp bàn giao rõ phiên và chính sách split. Bộ sinh fixture có text 50.001 ký tự, title 501 ký tự, ảnh hỏng, sai MIME, PNG hợp lệ vượt 10 MiB và EXIF tùy chọn.
 - Fixture API hiện có của Backend: `backend/tests/fixtures/api/v0.1.1/`, chỉ dùng phát triển hợp đồng/mock, **không** phải Test nghiên cứu hoặc bằng chứng suy luận thật.
 - **Train** dùng để fit; **Validation** dùng chọn siêu tham số/ngưỡng; **Test** giữ kín đến sau khi đóng băng và không dùng sửa giao diện, chọn mô hình, benchmark hoặc thử đi thử lại để tuning.
 - QA chỉ audit **metadata** Test trước thời điểm khóa: số lượng, hash, trùng nhóm; không dùng nội dung/nhãn/dự đoán Test để tối ưu. **QA kiểm hash và ký cùng #49 trước #50**, còn **#58 chỉ đối chiếu predictions, hash và tái tính metrics sau khi #50 hoàn thành**. Đây là hai hoạt động kiểm tra khác nhau, không được tạo phụ thuộc vòng.
@@ -43,6 +43,6 @@ Cập nhật: 23/11/2026. **Đây là kế hoạch kiểm thử, chưa phải k�
 
 ## 5. Phụ thuộc trước nghiệm thu
 
-Contract [v0.1.1](api-contract.md) còn **đề xuất**, chờ Backend/ML/Extension phê duyệt (#8). Auth, giới hạn truyền thực, giải mã ảnh, CORS, suy luận mô hình thật thuộc #22/#23/#38/#37. Không đánh dấu T04–T08 PASS chỉ vì mock hoạt động. T10–T12 chờ split nhóm, CLIP CPU và artifact thật. Cần chốt xung đột tiếng Việt/tiếng Anh giữa DEFINE và hợp đồng API.
+Contract [v0.1.1](api-contract.md) còn **đề xuất**, chờ Backend/ML/Extension phê duyệt (#8). Auth, giới hạn truyền thực, giải mã ảnh, CORS, suy luận mô hình thật thuộc #22/#23/#38/#37. Không đánh dấu T04–T08 PASS chỉ vì mock hoạt động. T10–T12 chờ split nhóm, CLIP CPU và artifact thật. Phiếu đăng ký đề tài xác định bài viết tiếng Anh. Bản sửa dòng phạm vi trong DEFINE và giao thức thực nghiệm nằm tại [PR #68](https://github.com/ngnsusinn/anti-fake-news/pull/68).
 
 Người phụ trách QA: `dangnguyen0512`; reviewer chuyên môn DATA: `locnguyen230`; CODEOWNER: `ngnsusinn`.

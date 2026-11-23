@@ -8,8 +8,8 @@ import tempfile
 import zlib
 
 
-def make_png(width=2, height=2):
-    """Tệp PNG RGB 2x2 hợp lệ, tự sinh hoàn toàn từ thư viện chuẩn."""
+def make_png(width=2, height=2, *, compression_level=-1):
+    """Tệp PNG RGB tự sinh hoàn toàn từ thư viện chuẩn."""
     def chunk(kind, payload):
         return struct.pack(">I", len(payload)) + kind + payload + struct.pack(
             ">I", zlib.crc32(kind + payload) & 0xFFFFFFFF
@@ -19,7 +19,7 @@ def make_png(width=2, height=2):
     return (
         b"\x89PNG\r\n\x1a\n"
         + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
-        + chunk(b"IDAT", zlib.compress(pixels))
+        + chunk(b"IDAT", zlib.compress(pixels, compression_level))
         + chunk(b"IEND", b"")
     )
 
@@ -28,12 +28,13 @@ def generate(destination, with_exif=False):
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
     (destination / "long-text.txt").write_text("a" * 50001, encoding="utf-8")
+    (destination / "long-title.txt").write_text("a" * 501, encoding="utf-8")
     (destination / "valid.png").write_bytes(make_png())
     (destination / "corrupt.png").write_bytes(b"not-an-image")
     (destination / "wrong-mime.txt").write_bytes(make_png())
-    # Giới hạn ảnh trong contract nháp: 10 MiB. Đây là payload giả, không phải ảnh giải mã được.
-    (destination / "oversized.png").write_bytes(b"\x00" * (10 * 1024 * 1024 + 1))
-    files = ["long-text.txt", "valid.png", "corrupt.png", "wrong-mime.txt", "oversized.png"]
+    # PNG hợp lệ, 4.2 MP; dữ liệu không nén để vượt 10 MiB.
+    (destination / "oversized.png").write_bytes(make_png(2048, 2048, compression_level=0))
+    files = ["long-text.txt", "long-title.txt", "valid.png", "corrupt.png", "wrong-mime.txt", "oversized.png"]
 
     if with_exif:
         try:

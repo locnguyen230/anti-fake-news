@@ -1,6 +1,7 @@
 """Kiểm tra độc lập định dạng và nguồn gốc fixture QA bằng unittest."""
 
 import json
+from importlib.util import find_spec
 from pathlib import Path
 import tempfile
 import unittest
@@ -34,13 +35,30 @@ class FixtureRegistryTests(unittest.TestCase):
     def test_generated_cases_have_expected_boundaries(self):
         with tempfile.TemporaryDirectory(prefix="afn-qa-check-") as temp:
             names = generate(temp)
-            self.assertEqual(len(names), 5)
+            self.assertEqual(len(names), 6)
             folder = Path(temp)
             self.assertEqual(len((folder / "long-text.txt").read_text()), 50001)
+            self.assertEqual(len((folder / "long-title.txt").read_text()), 501)
             self.assertEqual((folder / "corrupt.png").read_bytes(), b"not-an-image")
             self.assertTrue((folder / "valid.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
             self.assertEqual((folder / "wrong-mime.txt").read_bytes(), make_png())
-            self.assertEqual((folder / "oversized.png").stat().st_size, 10 * 1024 * 1024 + 1)
+            self.assertGreater((folder / "oversized.png").stat().st_size, 10 * 1024 * 1024)
+
+    @unittest.skipUnless(find_spec("PIL"), "Pillow is optional for image fixture validation")
+    def test_oversized_and_exif_fixtures_decode(self):
+        from PIL import Image, ImageOps
+
+        with tempfile.TemporaryDirectory(prefix="afn-qa-image-check-") as temp:
+            folder = Path(temp)
+            names = generate(folder, with_exif=True)
+            self.assertIn("orientation-6.jpg", names)
+            with Image.open(folder / "oversized.png") as image:
+                self.assertEqual(image.format, "PNG")
+                self.assertEqual(image.size, (2048, 2048))
+                image.load()
+            with Image.open(folder / "orientation-6.jpg") as image:
+                self.assertEqual(image.getexif()[274], 6)
+                self.assertEqual(ImageOps.exif_transpose(image).size, (2, 3))
 
     def test_race_and_split_synthetic_metadata(self):
         race = json.loads((VERSION / "session-race.json").read_text(encoding="utf-8"))

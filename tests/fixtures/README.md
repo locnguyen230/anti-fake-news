@@ -13,7 +13,7 @@ Các tệp QA bổ sung trong `qa/v0.1.1/`:
 - `manifest.json`: danh mục có version, tác giả/nguồn và mục đích của từng fixture.
 - `session-race.json`: hai request UUID, thứ tự phản hồi đảo ngược để thử phiên/tab (T01, T09).
 - `split-policy.json`: quy tắc chia Train/Validation/Test để audit **metadata**, không chứa bất kỳ mẫu Test nghiên cứu nào (T10, T11).
-- `generate_fixtures.py`: sinh ảnh PNG hợp lệ, byte ảnh hỏng, MIME giả, payload >10 MiB và text 50.001 ký tự. Có thể sinh JPEG EXIF orientation=6 nếu đã cài riêng Pillow.
+- `generate_fixtures.py`: sinh ảnh PNG hợp lệ, byte ảnh hỏng, MIME giả, PNG hợp lệ >10 MiB, text 50.001 ký tự và tiêu đề 501 ký tự. Có thể sinh JPEG EXIF orientation=6 nếu đã cài riêng Pillow.
 
 ## Chạy thử bộ fixture
 
