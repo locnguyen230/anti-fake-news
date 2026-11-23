@@ -104,6 +104,12 @@ try {
   assert.equal(await analysis.locator('#text').inputValue(), input);
   assert.ok(await analysis.locator('#image-upload').evaluate(node => node === document.activeElement));
   console.log('PASS validation preserves draft and focuses the invalid field');
+  await analysis.setViewportSize({ width: 360, height: 720 });
+  await analysis.locator('#title').focus();
+  await analysis.keyboard.press('Tab');
+  assert.ok(await analysis.locator('#text').evaluate(node => node === document.activeElement));
+  assert.ok(await analysis.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  console.log('PASS keyboard focus and narrow viewport layout');
   if (process.env.AFN_MOCK_TEST_URL) {
     await analysis.locator('#endpoint').fill(process.env.AFN_MOCK_TEST_URL);
     await analysis.locator('#check-health').click();
