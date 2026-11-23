@@ -99,6 +99,16 @@ try {
   await analysis.locator('#remove-image').click();
   assert.equal(await analysis.locator('#image-preview').isHidden(), true);
   console.log('PASS candidate bytes, manual upload and preview cleanup');
+  const filePicker = analysis.locator('#image-upload');
+  await filePicker.setInputFiles({ name: 'too-large.png', mimeType: 'image/png', buffer: Buffer.alloc(10 * 1024 * 1024 + 1) });
+  await analysis.waitForFunction(() => document.querySelector('#image-status').textContent.includes('10 MiB'));
+  const largeDimensions = await readFile(join(fixtures, 'synthetic.png'));
+  largeDimensions.writeUInt32BE(5000, 16);
+  largeDimensions.writeUInt32BE(5000, 20);
+  await filePicker.setInputFiles({ name: 'too-many-pixels.png', mimeType: 'image/png', buffer: largeDimensions });
+  await analysis.waitForFunction(() => document.querySelector('#image-status').textContent.includes('20 megapixel'));
+  assert.equal(await analysis.locator('#image-preview').isHidden(), true);
+  console.log('PASS byte and pixel limits before image decode');
   await analysis.locator('#analyze').click();
   assert.match(await analysis.locator('#form-status').innerText(), /Chọn một ảnh/u);
   assert.equal(await analysis.locator('#text').inputValue(), input);
@@ -137,6 +147,88 @@ try {
     await analysis.locator('#retry').click();
     await analysis.locator('#result').waitFor({ state: 'visible' });
     console.log('PASS 503 preserves the draft and manual retry reaches the mock');
+
+    let releaseOld;
+    let oldArrived;
+    let oldFinished;
+    const allowOld = new Promise(resolve => { releaseOld = resolve; });
+    const seenOld = new Promise(resolve => { oldArrived = resolve; });
+    const finishedOld = new Promise(resolve => { oldFinished = resolve; });
+    let count = 0;
+    await analysis.route(predictUrl, async route => {
+      const older = ++count === 1;
+      const requestId = route.request().postData()?.match(/name="request_id"\r\n\r\n([0-9a-f-]+)/i)?.[1];
+      assert.ok(requestId);
+      if (older) {
+        oldArrived();
+        await allowOld;
+      }
+      try {
+        await route.fulfill({ json: {
+          request_id: requestId, label: 'real', fake_score: 0.42, model_id: 'dev-mock-not-a-model',
+          model_version: older ? 'race-old' : 'race-new', processing_time_ms: 1, text_truncated: false,
+        } });
+      } catch (error) {
+        if (!older) throw error;
+      } finally {
+        if (older) oldFinished();
+      }
+    });
+    await analysis.locator('#analyze').click();
+    await Promise.race([seenOld, delay(7000, undefined, { ref: false }).then(() => {
+      throw Error('First request did not reach the race fixture');
+    })]);
+    await analysis.locator('#text').fill(input + ' Updated while waiting.');
+    await analysis.locator('#analyze').click();
+    await analysis.waitForFunction(() => document.querySelector('#result-detail').textContent.includes('race-new'));
+    releaseOld();
+    await Promise.race([finishedOld, delay(7000, undefined, { ref: false }).then(() => {
+      throw Error('The delayed route did not finish');
+    })]);
+    assert.match(await analysis.locator('#result-detail').innerText(), /race-new/u);
+    await analysis.unroute(predictUrl);
+
+    await analysis.route(predictUrl, route => route.fulfill({ json: {
+      request_id: '550e8400-e29b-41d4-a716-446655440019', label: 'real', fake_score: 0.42,
+      model_id: 'dev-mock-not-a-model', model_version: 'wrong-id', processing_time_ms: 1, text_truncated: false,
+    } }), { times: 1 });
+    await analysis.locator('#analyze').click();
+    await analysis.locator('#retry').waitFor({ state: 'visible' });
+    assert.match(await analysis.locator('#analysis-status').innerText(), /không hợp lệ/u);
+    assert.equal(await analysis.locator('#result').isHidden(), true);
+
+    const originalSessionId = sessionId(analysis);
+    await analysis.reload();
+    await analysis.waitForFunction(() => !document.querySelector('#draft').disabled);
+    assert.equal(sessionId(analysis), originalSessionId);
+    assert.equal(await analysis.locator('#text').inputValue(), input);
+    assert.equal(await analysis.locator('#image-preview').isHidden(), true);
+    console.log('PASS out-of-order responses, wrong UUID and reload session');
+
+  }
+
+
+  const realEndpoint = process.env.AFN_REAL_TEST_URL;
+  const notReadyEndpoint = process.env.AFN_NOT_READY_TEST_URL;
+  if (realEndpoint || notReadyEndpoint) {
+    await analysis.locator('#endpoint').fill(realEndpoint || notReadyEndpoint);
+    await analysis.locator('#demo-token').fill(process.env.AFN_REAL_TEST_TOKEN || '');
+    await analysis.locator('#image-upload').setInputFiles(join(fixtures, 'synthetic.png'));
+    await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
+    await analysis.locator('#analyze').click();
+    if (realEndpoint) {
+      await analysis.locator('#result').waitFor({ state: 'visible' });
+      assert.match(await analysis.locator('#result-detail').innerText(), /Dự đoán của mô hình/u);
+      assert.doesNotMatch(await analysis.locator('#result-detail').innerText(), /dev-mock-not-a-model/u);
+      console.log('PASS extension reaches a ready real predictor');
+    } else {
+      await analysis.locator('#retry').waitFor({ state: 'visible' });
+      assert.match(await analysis.locator('#analysis-status').innerText(), /chưa sẵn sàng/u);
+      assert.equal(await analysis.locator('#result').isHidden(), true);
+      assert.equal(await analysis.locator('#text').inputValue(), input);
+      assert.equal(await analysis.locator('#image-preview').isVisible(), true);
+      console.log('PASS real-mode 503 leaves draft and image available');
+    }
   }
 
   const dynamic = await context.newPage();
