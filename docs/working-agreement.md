@@ -1,6 +1,6 @@
 # Quy ước làm việc nhóm — AFN-013 (bản nháp chờ thống nhất)
 
-Cập nhật: 23/11/2026. Phạm vi: 60 công việc AFN-001 đến AFN-060 trong 4 tuần. QA đã chọn hai khung giờ review và ngày checkpoint bên dưới vào 23/11/2026. Cần thông báo để các thành viên xác nhận; **chưa có bằng chứng cả nhóm thống nhất**. Giờ cụ thể của checkpoint và thời điểm khóa Test vẫn chưa được chốt.
+Cập nhật: 23/11/2026. Phạm vi: 60 công việc AFN-001 đến AFN-060 trong 4 tuần. Theo xác nhận của đại diện QA ngày 23/11/2026, **cả nhóm đã thống nhất** giờ review 11:30, 20:30 hằng ngày và checkpoint 20:30 tại bốn ngày cuối tuần dưới đây. Thời điểm khóa Test vẫn cần thống nhất riêng.
 
 ## 1. Phân công trách nhiệm
 
@@ -42,15 +42,15 @@ Luồng trạng thái đề xuất: **Backlog → Ready → In progress → Revi
 ## 4. Quy trình review và bàn giao
 
 1. Người thực hiện mở PR gắn issue, mô tả phạm vi, phiên bản API/fixture, lệnh kiểm thử và kết quả. Người review chuyên môn kiểm tra trước khi CODEOWNER phê duyệt/merge.
-2. Hai cửa sổ review **đã được QA lựa chọn**: **11:30** và **20:30 hằng ngày** theo `Asia/Ho_Chi_Minh`, áp dụng trong cả bốn tuần. Cần thông báo và lấy xác nhận của các thành viên trước khi coi đây là thỏa thuận chung.
+2. Hai khung giờ review **đã được nhóm thống nhất (theo xác nhận của QA)**: **11:30** và **20:30 hằng ngày** theo `Asia/Ho_Chi_Minh`, áp dụng trong cả bốn tuần.
 3. Khi thay đổi hợp đồng/API, thông báo các bên dùng giao diện (Backend, ML, Extension, QA), nâng phiên bản khi cần và sửa fixture/tài liệu liên quan cùng lúc.
 4. Ghi blocker theo mẫu: `issue | vấn đề | đầu vào/phiên bản còn thiếu | người gỡ | hành động | hạn dự kiến | liên kết bằng chứng | trạng thái`. Người bị chặn chuyển sang việc độc lập, không làm giả dữ liệu.
 5. Quy tắc sử dụng quỹ dự phòng **đề xuất**: ưu tiên blocker P0, tiếp đến lỗi tích hợp/hồi quy, sau cùng mới là chỉnh sửa tài liệu. Ghi số giờ dùng, người phê duyệt và phạm vi phải giảm; không tự tăng lịch hoặc đổi kiến trúc.
-6. Ngày checkpoint **đã được QA lựa chọn**: **23/11/2026 (W1)**, **30/11/2026 (W2)**, **07/12/2026 (W3)** và **14/12/2026 (W4)** (giờ Việt Nam). Chưa xác định giờ họp cụ thể; cần xác nhận với nhóm. Mỗi checkpoint rà bằng chứng và quyết định **Go / Conditional Go / No Go**. Chỉ khóa Test sau khi mô hình, tiền xử lý, ngưỡng, chia tập được đóng băng (#49) và kiểm tra tính toàn vẹn (#58); trước khi #50 chạy Test thật. **Ngày/giờ khóa Test cụ thể cần cả nhóm chốt.**
+6. Các checkpoint **đã được nhóm thống nhất (theo xác nhận của QA)**, đều bắt đầu lúc **20:30, giờ Việt Nam**: **23/11/2026 (W1)**, **30/11/2026 (W2)**, **07/12/2026 (W3)** và **14/12/2026 (W4)**. Mỗi checkpoint rà bằng chứng và quyết định **Go / Conditional Go / No Go**. Chỉ khóa Test sau khi mô hình, tiền xử lý, ngưỡng, chia tập được đóng băng (#49) và kiểm tra tính toàn vẹn (#58); trước khi #50 chạy Test thật. **Ngày/giờ khóa Test cụ thể cần cả nhóm chốt.**
 
 ## 5. Quyết định còn chờ nhóm
 
-- Thông báo để cả nhóm xác nhận hai khung giờ review 11:30 và 20:30 cùng bốn ngày checkpoint đã được QA chọn; chốt giờ bắt đầu từng checkpoint và thời điểm khóa Test.
+- **Đã chốt lịch review/checkpoint theo xác nhận của QA.** Còn cần chốt thời điểm khóa Test, tách biệt với các mốc checkpoint.
 - Giải quyết mâu thuẫn ngôn ngữ: `DEFINE.md` mô tả tiếng Việt, nhưng bản hợp đồng API đề xuất từng nêu tiền xử lý tiếng Anh.
 - Duyệt hợp đồng API/Predictor v0.1.1: byte ảnh hoặc RGB, EXIF, giới hạn request 12 MiB, timeout, token, ưu tiên lỗi và phần form trùng lặp.
 - `DESIGN.md` hiện có §1–4, nên những tham chiếu §8–14 trong issue chưa thể đối chiếu với bản hiện tại.
