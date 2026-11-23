@@ -16,7 +16,7 @@ Cập nhật: 23/11/2026. **Đây là kế hoạch kiểm thử, chưa phải k�
 | T08 | F07 | EXTENSION #41, BACKEND #38 | Tắt API, gây timeout/lỗi mạng/CORS rồi thử lại | Thông báo dễ hiểu, giữ bản nhập, không tạo kết quả giả hoặc tự retry nguy hiểm | Ảnh chụp, status và trạng thái server |
 | T09 | F07 | EXTENSION #42 | Gửi A rồi B trong cùng tab, cho A trả về trễ hơn B | Bỏ kết quả A đã cũ, chỉ hiển thị B; tab khác không bị ảnh hưởng | UUID và thứ tự sự kiện |
 | T10 | F08 | DATA #18, ML #34 | Kiểm tra manifest, nhóm, chia 70/15/15 và seed | Không rò rỉ nhóm; ba mô hình dùng cùng chia tập; không xem Test để chọn tham số | Hash manifest/split, báo cáo audit |
-| T11 | F08 | ML #34, #49–50 | Huấn luyện ba cấu hình đã định, chọn C/ngưỡng bằng Validation | Không dùng Test để tuning; lưu Macro-F1 và metric từng lớp sau đóng băng | Cấu hình, log, metric tổng hợp |
+| T11 | F08 | ML #34/#49/#50; QA #58 | Chọn C/ngưỡng chỉ trên Validation; tại #49 ML+QA ký hash và protocol trước khi mở Test; #50 xuất predictions/metrics; #58 audit lại từ predictions | Test chỉ chạy sau sign-off #49; #58 kiểm hash và tái tính metric **sau #50**, không tuning hoặc inference lại | `model-freeze.json`, `pre-test-signoff.md`, predictions, `evaluation-audit.md` |
 | T12 | NFR, F01–F08 | QA #43, INTEGRATION #45, BACKEND #52 | Chạy end-to-end trên 10 trang đã chọn; đo ≥20 lần suy luận thật trên máy demo | Báo tỷ lệ trích xuất và trung vị thời gian thực tế, so với mục tiêu trong DEFINE | Checklist trang, CSV thời gian, cấu hình máy |
 
 ## 2. Chỉ tiêu phi chức năng
@@ -31,7 +31,7 @@ Cập nhật: 23/11/2026. **Đây là kế hoạch kiểm thử, chưa phải k�
 - Registry `manifest.json` nêu nguồn gốc và version của từng mẫu; `session-race.json` và `split-policy.json` giúp bàn giao rõ phiên và chính sách split. Có bộ sinh fixture cục bộ cho text dài/ảnh hỏng/sai MIME/ảnh quá lớn và EXIF tùy chọn.
 - Fixture API hiện có của Backend: `backend/tests/fixtures/api/v0.1.1/`, chỉ dùng phát triển hợp đồng/mock, **không** phải Test nghiên cứu hoặc bằng chứng suy luận thật.
 - **Train** dùng để fit; **Validation** dùng chọn siêu tham số/ngưỡng; **Test** giữ kín đến sau khi đóng băng và không dùng sửa giao diện, chọn mô hình, benchmark hoặc thử đi thử lại để tuning.
-- QA chỉ audit **metadata** Test trước thời điểm khóa: số lượng, hash, trùng nhóm; không dùng nội dung/nhãn/dự đoán Test để tối ưu.
+- QA chỉ audit **metadata** Test trước thời điểm khóa: số lượng, hash, trùng nhóm; không dùng nội dung/nhãn/dự đoán Test để tối ưu. **QA kiểm hash và ký cùng #49 trước #50**, còn **#58 chỉ đối chiếu predictions, hash và tái tính metrics sau khi #50 hoàn thành**. Đây là hai hoạt động kiểm tra khác nhau, không được tạo phụ thuộc vòng.
 
 ## 4. Kiểm thử lỗi và cách ghi kết quả
 
