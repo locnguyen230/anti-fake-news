@@ -24,8 +24,14 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
     clearDisplay();
   }
 
-  form.addEventListener('afn:draft-change', invalidate);
-  for (const field of Object.values(configFields)) field.addEventListener('input', invalidate);
+  function invalidateEdit() {
+    lifecycle.invalidate();
+    if (recovery.hasRetry) resultView.clear();
+    else clearDisplay();
+  }
+
+  form.addEventListener('afn:draft-change', invalidateEdit);
+  for (const field of Object.values(configFields)) field.addEventListener('input', invalidateEdit);
   addEventListener('pagehide', invalidate);
 
   async function checkHealth() {
