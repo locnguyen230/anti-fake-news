@@ -181,6 +181,7 @@ def test_palette_with_transparency_and_greyscale_alpha():
         ("L", 0, 64, (64, 64, 64)),
         ("RGB", (0, 64, 128), (16, 32, 48), (16, 32, 48)),
         ("I;16", 1024, 32768, (128, 128, 128)),
+        ("1", 0, 1, (255, 255, 255)),
     ],
 )
 def test_png_color_key_transparency_is_flattened_on_white(mode, transparent, opaque, opaque_rgb):
@@ -192,6 +193,35 @@ def test_png_color_key_transparency_is_flattened_on_white(mode, transparent, opa
     assert out.getpixel((0, 0)) == pp.ALPHA_BACKGROUND_RGB
     assert out.getpixel((1, 0)) == opaque_rgb
     assert "transparency" not in out.info
+
+
+@needs_ml
+@pytest.mark.parametrize(("mode", "colour"), [("L", 0), ("RGB", (0, 64, 128))])
+def test_png_color_key_review_fixtures_1x1(mode, colour):
+    # Exact PR #68 review fixtures: previously returned (0,0,0) / (0,64,128).
+    out = pp.load_image_rgb(_encode(Image.new(mode, (1, 1), colour), transparency=colour))
+    assert out.getpixel((0, 0)) == pp.ALPHA_BACKGROUND_RGB
+
+
+@needs_ml
+def test_png_16bit_color_key_matches_wide_value_only():
+    # 1000 and 1001 round to the same 8-bit grey; only the exact key is transparent.
+    arr = np.array([[1000, 1001]], dtype=np.uint16)
+    out = pp.load_image_rgb(_encode(Image.fromarray(arr), transparency=1000))
+    assert out.getpixel((0, 0)) == pp.ALPHA_BACKGROUND_RGB
+    assert out.getpixel((1, 0)) == (4, 4, 4)
+
+
+@needs_ml
+def test_png_color_key_survives_exif_rotation():
+    image = Image.new("RGB", (2, 1), (10, 200, 30))
+    image.putpixel((0, 0), (0, 64, 128))
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    out = pp.load_image_rgb(_encode(image, transparency=(0, 64, 128), exif=exif))
+    assert out.size == (1, 2)
+    assert out.getpixel((0, 0)) == pp.ALPHA_BACKGROUND_RGB
+    assert out.getpixel((0, 1)) == (10, 200, 30)
 
 
 @needs_ml
