@@ -101,8 +101,7 @@ dùng cấu hình khác.
 
 **Phương án CPU trước khi mở rộng batch:** ~44 ms/ảnh ⇒ 400 ảnh ≈ 20–30 s trên CPU M1,
 nên trích embedding cho dataset 200–500 mẫu chạy CPU là đủ; chưa cần GPU/MPS.
-Thời gian suy luận 1 request còn xa mục tiêu trung vị 10 s (DEFINE §7). Máy Windows
-của nhóm cần đo lại bằng cùng lệnh.
+Các số đo encoder hỗ trợ ước lượng thời gian trích đặc trưng. Ca đo độ trễ end-to-end dưới 10 giây dùng mô hình đầy đủ trên máy demo.
 
 ## 5. Bàn giao cho Backend loader (#24/#37)
 

@@ -1,21 +1,20 @@
 # Anti-fake-news
 
-Local FastAPI foundation and dev mock for **AFN-007 / AFN-008 / AFN-009**. Python **3.10** is the
-initial dependency baseline (tested patch version is recorded in the execution
-report). ML environment compatibility and reviewer approval remain pending.
+Local FastAPI foundation and dev mock for **AFN-007 / AFN-008 / AFN-009**.
+Python **3.13** is the verified shared setup for Backend and ML on Windows x64.
+See [ML environment](docs/ml-environment.md) for shared dependencies and CLIP checks.
 
 By default, `GET /health` reports `model_ready: false` and `POST /predict`
 returns HTTP 503 without reading uploads. An explicit dev/test mock can return
 synthetic responses for UI development; see [dev-mock.md](docs/dev-mock.md).
-This is not a real-model demo. The current verification used Python 3.13.1;
-ML environment agreement is still pending.
+The real-mode scaffold returns 503 until the trained predictor is integrated.
 
 ## Setup and run
 
 From the repository root, on Windows PowerShell:
 
 ```powershell
-python -m venv .venv
+py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
 # Optional: copy only when you do not already have a local .env.
 Copy-Item .env.example .env
@@ -23,10 +22,10 @@ cd backend
 ..\.venv\Scripts\python.exe -m app
 ```
 
-On Linux/macOS (Python 3.10 installed):
+On Linux/macOS (Python 3.13 installed):
 
 ```sh
-python3.10 -m venv .venv
+python3.13 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.txt
 cp -n .env.example .env
 cd backend
