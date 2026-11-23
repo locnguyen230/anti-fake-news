@@ -40,3 +40,7 @@ node tests/frontend/browser-smoke.mjs
 ```
 
 Browser smoke tải trực tiếp thư mục `extension` vào Chromium và dùng DevTools để kích hoạt action ở từng tab. QA review của `dangnguyen0512` vẫn đang chờ. [Tài liệu về thao tác kích hoạt action trong Chrome](https://pptr.dev/guides/chrome-extensions#triggering-extension-action).
+
+### Bàn giao phiên AFN-010
+
+UI đọc DTO qua `readSession(location.search)`. Worker chỉ thu thập và giữ DTO theo UUID, còn file, token và request HTTP thuộc trang phân tích. Khi Chrome không tạo được tab hoặc tab đóng trước khi ghi xong ownership, worker dọn bản ghi. Các tab khác vẫn giữ phiên riêng.
