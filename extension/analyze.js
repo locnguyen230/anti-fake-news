@@ -37,7 +37,10 @@ removeImage.addEventListener('click', () => {
   imageSelection.clear();
   upload.focus();
 });
-addEventListener('pagehide', () => imageSelection.clear());
+addEventListener('pagehide', () => {
+  upload.value = '';
+  imageSelection.clear();
+});
 
 const candidates = session?.candidateImages ?? [];
 if (candidates.length) {
@@ -49,7 +52,7 @@ if (candidates.length) {
     choose.textContent = label ? label + ' · ' + url : url;
     choose.addEventListener('click', () => {
       upload.value = '';
-      imageSelection.chooseCandidate(url);
+      imageSelection.chooseCandidate(url, session?.url);
     });
     item.append(choose);
     list.append(item);
