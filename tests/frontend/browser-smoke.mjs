@@ -117,6 +117,20 @@ try {
     assert.equal(await analysis.locator('#result').isHidden(), true);
     await analysis.locator('#text').fill(input);
     console.log('PASS browser multipart upload reaches FastAPI mock and labels the result');
+    const predictUrl = process.env.AFN_MOCK_TEST_URL + '/predict';
+    await analysis.route(predictUrl, async route => {
+      await route.fulfill({ status: 503, json: { error_code: 'model_not_ready', request_id: null } });
+    }, { times: 1 });
+    const beforeRetry = await analysis.locator('#text').inputValue();
+    await analysis.locator('#analyze').click();
+    await analysis.locator('#retry').waitFor({ state: 'visible' });
+    assert.match(await analysis.locator('#analysis-status').innerText(), /chưa sẵn sàng/u);
+    assert.equal(await analysis.locator('#text').inputValue(), beforeRetry);
+    assert.equal(await analysis.locator('#image-preview').isVisible(), true);
+    assert.equal(await analysis.locator('#result').isHidden(), true);
+    await analysis.locator('#retry').click();
+    await analysis.locator('#result').waitFor({ state: 'visible' });
+    console.log('PASS 503 preserves the draft and manual retry reaches the mock');
   }
 
   const dynamic = await context.newPage();
