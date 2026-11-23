@@ -13,7 +13,7 @@
 4. Dùng **Kiểm tra kết nối** để kiểm tra /health. Chỉ demo suy luận thật khi
    Backend chạy mode real, đã nạp artifact đã khóa và trả `model_ready=true`.
 
-Gói chỉ chứa mã MV3 và các tệp giao diện. Token demo nhập trong tab, được cấp
+Gói chỉ lấy mã MV3 và tệp giao diện trong danh sách runtime của script đóng gói. Token demo nhập trong tab, được cấp
 riêng từ cấu hình Backend. Xem [kết nối API](extension-config.md) và
 [kịch bản demo](demo-script.md). Phát hành theo mô hình unpacked của dự án.
 

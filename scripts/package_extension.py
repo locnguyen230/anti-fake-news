@@ -17,11 +17,22 @@ TOP_LEVEL = (
     "service-worker.js",
     "styles.css",
 )
+MODULES = (
+    "analysis-controller.js",
+    "api-client.js",
+    "error-recovery.js",
+    "form-state.js",
+    "form-validation.js",
+    "image-selection.js",
+    "request-lifecycle.js",
+    "result-view.js",
+    "session.js",
+)
 
 
 def source_files():
     files = [Path(name) for name in TOP_LEVEL]
-    files.extend(path.relative_to(SOURCE) for path in sorted((SOURCE / "modules").glob("*.js")))
+    files.extend(Path("modules") / name for name in MODULES)
     for relative in files:
         source = SOURCE / relative
         if not source.is_file() or source.is_symlink():
@@ -32,7 +43,10 @@ def source_files():
 def up_to_date(output, files):
     if not output.is_dir() or output.is_symlink():
         return False
-    if {p.relative_to(output) for p in output.rglob("*") if not p.is_dir()} != set(files):
+    contents = list(output.rglob("*"))
+    if any(path.is_symlink() for path in contents):
+        return False
+    if {path.relative_to(output) for path in contents if not path.is_dir()} != set(files):
         return False
     return all(
         not (output / relative).is_symlink()
@@ -42,6 +56,8 @@ def up_to_date(output, files):
 
 
 def build_extension(output):
+    if output.is_symlink():
+        raise ValueError("Choose a package directory without a symlink")
     output = output.resolve()
     if output == SOURCE or SOURCE in output.parents:
         raise ValueError("Choose a destination outside the extension source folder")
