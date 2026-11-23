@@ -12,4 +12,4 @@ gửi request. Tab giữ tệp trong bộ nhớ để thử lại.
 Để phát triển nội bộ, xem [cách bật mock](dev-mock.md). Backend mock được đánh dấu
 trên giao diện và có thể dùng token trống. Chế độ mặc định hiện trả 503 khi chưa
 có model thật. Bàn giao từ v0.1.1 sang model thật theo #37/#38; giao diện kết quả
-đầy đủ do #40 rà. Hợp đồng/tích hợp form-state tiếp tục theo #8/#12.
+ở module result-view chỉ nhận dữ liệu đã qua kiểm tra request. Bàn giao nội dung và review UI cuối ở #40. Hợp đồng và form-state tiếp tục được đối chiếu ở #8/#12.
