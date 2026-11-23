@@ -42,7 +42,7 @@ try {
   const origin = 'http://127.0.0.1:' + server.address().port;
   const manifest = JSON.parse(await readFile(join(extension, 'manifest.json'), 'utf8'));
   assert.deepEqual(manifest.permissions, ['activeTab', 'scripting', 'storage']);
-  assert.equal(manifest.host_permissions, undefined);
+  assert.deepEqual(manifest.host_permissions, ['http://127.0.0.1/*']);
   context = await chromium.launchPersistentContext(profile, {
     channel: 'chromium',
     args: [
@@ -104,6 +104,20 @@ try {
   assert.equal(await analysis.locator('#text').inputValue(), input);
   assert.ok(await analysis.locator('#image-upload').evaluate(node => node === document.activeElement));
   console.log('PASS validation preserves draft and focuses the invalid field');
+  if (process.env.AFN_MOCK_TEST_URL) {
+    await analysis.locator('#endpoint').fill(process.env.AFN_MOCK_TEST_URL);
+    await analysis.locator('#check-health').click();
+    await analysis.waitForFunction(() => document.querySelector('#analysis-status').textContent.includes('mock'));
+    await analysis.locator('#image-upload').setInputFiles(join(fixtures, 'synthetic.png'));
+    await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
+    await analysis.locator('#analyze').click();
+    await analysis.waitForFunction(() => !document.querySelector('#result').hidden);
+    assert.match(await analysis.locator('#result-detail').innerText(), /Giả lập.*dev-mock-not-a-model/u);
+    await analysis.locator('#text').fill(input + ' Changed.');
+    assert.equal(await analysis.locator('#result').isHidden(), true);
+    await analysis.locator('#text').fill(input);
+    console.log('PASS browser multipart upload reaches FastAPI mock and labels the result');
+  }
 
   const dynamic = await context.newPage();
   await dynamic.goto(origin + '/dynamic.html');

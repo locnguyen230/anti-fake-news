@@ -39,11 +39,28 @@
         <button id="remove-image" type="button" hidden>Bỏ ảnh</button>
       </section>
 
+      <section aria-labelledby="connection-heading">
+        <h2 id="connection-heading">Kết nối Backend</h2>
+        <label for="endpoint">Địa chỉ Backend cục bộ</label>
+        <input id="endpoint" type="url" value="http://127.0.0.1:8000" autocomplete="off">
+        <label for="demo-token">Token demo</label>
+        <input id="demo-token" type="password" autocomplete="off">
+        <label for="timeout">Thời gian chờ (mili giây)</label>
+        <input id="timeout" type="number" value="30000" min="1000" max="120000" step="1">
+        <button id="check-health" type="button">Kiểm tra kết nối</button>
+      </section>
+
       <section aria-label="Phân tích">
         <p id="form-status" role="status"></p>
+        <p id="analysis-status" role="status"></p>
         <button id="analyze" type="submit">Phân tích</button>
       </section>
     </form>
+
+    <section id="result" aria-labelledby="result-heading" hidden>
+      <h2 id="result-heading">Kết quả phân tích</h2>
+      <p id="result-detail"></p>
+    </section>
   </main>
 </body>
 </html>

@@ -1,3 +1,5 @@
+import { bindAnalysis } from './modules/analysis-controller.js';
+import { createApiClient } from './modules/api-client.js';
 import { bindFormValidation } from './modules/form-validation.js';
 import { createImageSelection } from './modules/image-selection.js';
 import { readSession } from './modules/session.js';
@@ -63,4 +65,11 @@ if (candidates.length) {
   }
   get('image-candidates').hidden = false;
 }
+const analysis = bindAnalysis({
+  form: get('analysis-form'),
+  configFields: { endpoint: get('endpoint'), demoToken: get('demo-token'), timeout: get('timeout') },
+  client: createApiClient(),
+  status: get('analysis-status'), result: get('result'), resultDetail: get('result-detail'),
+});
+get('check-health').addEventListener('click', analysis.checkHealth);
 get('draft').disabled = false;
