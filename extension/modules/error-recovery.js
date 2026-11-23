@@ -22,6 +22,7 @@ export function bindErrorRecovery(status, button) {
   let retry;
   button.addEventListener('click', () => retry?.());
   return {
+    get hasRetry() { return typeof retry === 'function'; },
     show(error, action) {
       status.textContent = describeApiError(error);
       retry = action;

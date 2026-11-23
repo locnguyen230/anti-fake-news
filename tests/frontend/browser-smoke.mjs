@@ -137,6 +137,17 @@ try {
     await analysis.locator('#retry').click();
     await analysis.locator('#result').waitFor({ state: 'visible' });
     console.log('PASS 503 preserves the draft and manual retry reaches the mock');
+    await analysis.route(predictUrl, route => route.fulfill({
+      status: 401, json: { error_code: 'invalid_token', request_id: null },
+    }), { times: 1 });
+    await analysis.locator('#analyze').click();
+    await analysis.locator('#retry').waitFor({ state: 'visible' });
+    await analysis.locator('#demo-token').fill('fixture-updated-token');
+    assert.equal(await analysis.locator('#retry').isVisible(), true);
+    assert.equal(await analysis.locator('#text').inputValue(), beforeRetry);
+    await analysis.locator('#retry').click();
+    await analysis.locator('#result').waitFor({ state: 'visible' });
+    console.log('PASS retry remains available after editing the demo token');
   }
 
   const dynamic = await context.newPage();
