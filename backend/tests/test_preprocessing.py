@@ -175,6 +175,26 @@ def test_palette_with_transparency_and_greyscale_alpha():
 
 
 @needs_ml
+@pytest.mark.parametrize(
+    ("mode", "transparent", "opaque", "opaque_rgb"),
+    [
+        ("L", 0, 64, (64, 64, 64)),
+        ("RGB", (0, 64, 128), (16, 32, 48), (16, 32, 48)),
+        ("I;16", 1024, 32768, (128, 128, 128)),
+    ],
+)
+def test_png_color_key_transparency_is_flattened_on_white(mode, transparent, opaque, opaque_rgb):
+    image = Image.new(mode, (2, 1), transparent)
+    image.putpixel((1, 0), opaque)
+
+    out = pp.load_image_rgb(_encode(image, transparency=transparent))
+
+    assert out.getpixel((0, 0)) == pp.ALPHA_BACKGROUND_RGB
+    assert out.getpixel((1, 0)) == opaque_rgb
+    assert "transparency" not in out.info
+
+
+@needs_ml
 def test_16bit_png_scaled_to_8bit():
     arr = np.full((2, 2), 65535, dtype=np.uint16)
     img = Image.fromarray(arr)

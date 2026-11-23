@@ -186,7 +186,8 @@ def load_image_rgb(image_bytes: bytes, *, max_pixels: int = IMAGE_MAX_PIXELS) ->
 def _to_rgb(img: "Image.Image") -> "Image.Image":
     from PIL import Image
 
-    if img.mode == "P" and "transparency" in img.info:
+    transparency = img.info.get("transparency")
+    if transparency is not None and img.mode in ("1", "L", "P", "RGB"):
         img = img.convert("RGBA")
     if img.mode in ("RGBA", "LA", "PA"):
         rgba = img.convert("RGBA")
@@ -198,10 +199,13 @@ def _to_rgb(img: "Image.Image") -> "Image.Image":
 
         arr = np.asarray(img, dtype=np.float64)
         maxv = 65535.0 if img.mode.startswith("I") else (float(arr.max()) or 1.0)
-        arr = np.clip(arr / maxv * 255.0, 0, 255).round().astype(np.uint8)
-        img = Image.fromarray(arr)  # 2-D uint8 -> mode "L"
+        scaled = np.clip(arr / maxv * 255.0, 0, 255).round().astype(np.uint8)
+        if transparency is not None:
+            scaled[arr == transparency] = ALPHA_BACKGROUND_RGB[0]
+        img = Image.fromarray(scaled)  # 2-D uint8 -> mode "L"
     rgb = img.convert("RGB")
     rgb.info.pop("exif", None)
+    rgb.info.pop("transparency", None)
     return rgb
 
 
