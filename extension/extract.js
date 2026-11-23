@@ -1,13 +1,18 @@
 // Chrome serializes this function into the tab's isolated world.
 export function extractArticle() {
   const EXCLUDED = 'nav, aside, footer, script, style, template, noscript, [hidden], [aria-hidden="true"], [role="navigation"], [role="complementary"]';
-  const article = document.querySelector('article, [itemprop="articleBody"]');
-  const scope = article ?? document.querySelector('main, [role="main"]') ?? document.body;
-
   function visible(element) {
-    return !element.closest(EXCLUDED) && Boolean(element.getClientRects().length)
-      && getComputedStyle(element).visibility === 'visible';
+    if (element.closest(EXCLUDED) || !element.getClientRects().length
+        || getComputedStyle(element).visibility !== 'visible') return false;
+    for (let current = element; current; current = current.parentElement) {
+      if (getComputedStyle(current).contentVisibility === 'hidden') return false;
+    }
+    return true;
   }
+
+  const article = [...document.querySelectorAll('article, [itemprop="articleBody"]')].find(visible);
+  const main = article ? null : [...document.querySelectorAll('main, [role="main"]')].find(visible);
+  const scope = article ?? main ?? document.body;
 
   function cleanText(element) {
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
@@ -50,7 +55,7 @@ export function extractArticle() {
   const candidates = new Map();
 
   function addImage(value, label) {
-    if (!value || candidates.size >= 12) return;
+    if (!value?.trim() || candidates.size >= 12) return;
     try {
       const url = new URL(value, document.baseURI);
       if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return;

@@ -82,7 +82,7 @@ try {
   const input = await analysis.locator('#text').inputValue();
   assert.match(input, /hạt giống/u);
   assert.match(input, /mang hạt giống đã ghi tên và trao đổi/u);
-  assert.doesNotMatch(input, /Menu|Quảng cáo|Nội dung ẩn|chân trang|Đoạn ẩn bằng CSS|Chữ ẩn theo visibility/u);
+  assert.doesNotMatch(input, /Menu|Quảng cáo|Nội dung ẩn|chân trang|Đoạn ẩn bằng CSS|Chữ ẩn theo visibility|Không được chọn bài ẩn/u);
   assert.match(await analysis.locator('#source').innerText(), /article\.html/u);
   assert.equal(await analysis.locator('#candidates li').count(), 2);
   assert.match(await analysis.locator('#candidates li').first().innerText(), /\/synthetic\.png/u);
