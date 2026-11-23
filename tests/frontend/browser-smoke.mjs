@@ -12,7 +12,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.AFN_PLAYWRIGHT_PATH || 'playwright');
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const fixtures = join(root, 'tests', 'fixtures', 'pages');
-const extension = join(root, 'extension');
+const extension = process.env.AFN_EXTENSION_UNPACKED || join(root, 'extension');
 const profile = await mkdtemp(join(tmpdir(), 'afn-w1-browser-'));
 
 const mediaTypes = new Map([
