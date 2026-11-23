@@ -1,9 +1,13 @@
 # Anti-fake-news
 
-Local FastAPI foundation, explicit dev/test mock, authenticated request limits and image
-validation (AFN-007/008/009/022/023). Contract **v0.2.0**; ML/Extension review pending.
-Real mode has no model loader: valid authenticated requests return 503. Mock responses are
-synthetic and clearly marked `dev-mock-not-a-model`, never evidence of ML accuracy.
+Local FastAPI foundation and dev mock for **AFN-007 / AFN-008 / AFN-009**.
+Python **3.13** is the verified shared setup for Backend and ML on Windows x64.
+See [ML environment](docs/ml-environment.md) for shared dependencies and CLIP checks.
+
+By default, `GET /health` reports `model_ready: false` and `POST /predict`
+returns HTTP 503 without reading uploads. An explicit dev/test mock can return
+synthetic responses for UI development; see [dev-mock.md](docs/dev-mock.md).
+The real-mode scaffold returns 503 until the trained predictor is integrated.
 
 ## Setup and run
 
@@ -16,12 +20,23 @@ and substitute its interpreter below. Linux/macOS and the complete ML environmen
 From the repository root, PowerShell:
 
 ```powershell
-.\.venv\issue9\Scripts\python.exe -m pip install -r backend/requirements.txt
-# Optional: copy only if you have no local .env yet.
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+# Optional: copy only when you do not already have a local .env.
 Copy-Item .env.example .env
 # Supply AFN_DEMO_TOKEN privately in .env or this process environment.
 cd backend
-..\.venv\issue9\Scripts\python.exe -m app
+..\.venv\Scripts\python.exe -m app
+```
+
+On Linux/macOS (Python 3.13 installed):
+
+```sh
+python3.13 -m venv .venv
+.venv/bin/python -m pip install -r backend/requirements.txt
+cp -n .env.example .env
+cd backend
+../.venv/bin/python -m app
 ```
 
 No activation needed; stop with Ctrl+C. The launcher honors AFN_HOST/AFN_PORT and accepts
