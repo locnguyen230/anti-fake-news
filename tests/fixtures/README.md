@@ -1,19 +1,24 @@
-# QA fixture registry (AFN-014)
+# Danh mục dữ liệu kiểm thử QA — AFN-014
 
-Owned by QA. Synthetic samples only. No credentials, downloaded articles, real dataset Test rows, model weights or licensed images are committed. For actual research Test, track only an authorized immutable manifest/hash separately; never use it for development or tuning.
+Chỉ lưu **dữ liệu giả lập tự tạo** phục vụ kiểm thử hợp đồng. Không đưa secret, bài báo/ảnh thu thập chưa rõ quyền, dữ liệu Test nghiên cứu, trọng số mô hình hoặc thông tin máy cá nhân lên GitHub.
 
-| Namespace | Origin | Purpose | Expected behavior |
+| Namespace / tệp | Nguồn gốc | Mục đích | Kết quả dự kiến |
 | --- | --- | --- | --- |
-| `qa/v0.1.1/empty-text.json` | Hand-written synthetic data, 2026-11-23 | T04 whitespace-only body | Reject as invalid; no prediction |
-| `qa/v0.1.1/request-valid-fields.json` | Hand-written synthetic data, 2026-11-23 | T06 multipart *field blueprint* | Request uses UUID + text + one uploaded image; not a runnable multipart body |
-| `backend/tests/fixtures/api/v0.1.1/` | Existing Backend development mock/contract fixtures | Parser/schema development | Not proof of real inference or research Test result |
+| `qa/v0.1.1/empty-text.json` | QA tự tạo, 23/11/2026 | T04: phần thân chỉ có khoảng trắng | Từ chối `invalid_input` khi API thật đã xác thực |
+| `qa/v0.1.1/request-valid-fields.json` | QA tự tạo, 23/11/2026 | T06: mẫu cấu trúc trường multipart | Gửi UUID + văn bản + một ảnh hợp lệ; **không** gửi nguyên JSON vào `/predict` |
+| `backend/tests/fixtures/api/v0.1.1/` | Fixture phát triển của Backend có sẵn | Kiểm thử schema/parser/mock | Không chứng minh mô hình suy luận thật |
 
-Generate rather than commit heavy or potentially copyrighted data:
+## Cách tạo các fixture khác tại máy cục bộ
 
-1. **Long body**: generate `"a".repeat(50001)` as text; validate against the agreed 50,000-codepoint ceiling; include a 501-codepoint title edge case. No real article needed.
-2. **Corrupt image**: create a local file containing plain UTF-8 `not-an-image` but with `.png` name; try both `image/png` and `text/plain` MIME. Never assume the current mock rejects decode failures: full decoder belongs to #23.
-3. **Too-large image**: generate a disposable >10 MiB buffer as test input in a temporary directory, do not commit it. Expected final API 413; whole-request 12 MiB remains proposed.
-4. **EXIF orientation**: generate or obtain an original, permission-cleared JPEG with orientation=6 and record author/license and expected upright dimensions. Not bundled until verified; #23 owns actual normalization.
-5. **Race, timeout and CORS**: two distinct UUIDs, deferred response A/B, a server that closes/delays connections, and an unauthorized browser origin. Store only sanitized traces. Ensure origin/token checks are evaluated independently.
+1. **Văn bản dài:** tạo chuỗi `"a".repeat(50001)` để thử giới hạn 50.000 Unicode code point; thử title dài 501 ký tự. Không cần bài báo thật.
+2. **Ảnh hỏng và MIME sai:** tạo tệp `.png` chứa nội dung `not-an-image`, lần lượt thử MIME `image/png` và `text/plain`. Mock hiện tại **không** thay thế kiểm tra giải mã ảnh thật của #23.
+3. **Ảnh quá lớn:** tạo buffer >10 MiB trong thư mục tạm, không commit. API thật dự kiến trả 413; giới hạn tổng request 12 MiB còn là đề xuất.
+4. **Ảnh EXIF:** dùng JPEG tự tạo hoặc ảnh được phép chia sẻ có EXIF orientation=6; ghi tác giả/quyền sử dụng và kích thước kỳ vọng sau xoay. Chưa bổ sung ảnh vào Git nếu chưa xác minh nguồn.
+5. **Race/timeout/CORS:** tạo hai UUID khác nhau, cố ý đảo thứ tự phản hồi, ngắt/trì hoãn server và thử origin không hợp lệ. Chỉ lưu trace đã xóa nội dung nhạy cảm.
 
-Version rule: contract changes require explicit version bump, synchronization of request examples, test matrix and fixtures, and notification to Backend/ML/Extension. None of these files are scientific Test samples.
+## Quy tắc phân tách
+
+- Fixture phát triển và **Test nghiên cứu** phải nằm ở các namespace/bộ dữ liệu tách biệt.
+- Không dùng Test nghiên cứu để chỉnh UI, benchmark, chọn C/ngưỡng hay cấu hình.
+- Khi thay đổi hợp đồng phải cập nhật phiên bản fixture, test plan và báo Backend/ML/Extension; không âm thầm đổi tên trường.
+- Các JSON hiện có chỉ là **bản mẫu đầu vào**, chưa phải báo cáo kiểm thử PASS.
