@@ -43,11 +43,22 @@ async function validate(file) {
   return normalized;
 }
 
-async function fetchCandidate(value, controller) {
+export function candidateImageUrl(value, sourceUrl) {
+  const url = new URL(value);
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw Error();
+
+  const loopback = url.hostname === 'localhost' || url.hostname === '[::1]'
+    || /^127\.\d+\.\d+\.\d+$/u.test(url.hostname);
+  if (loopback && (!sourceUrl || new URL(sourceUrl).origin !== url.origin)) {
+    throw Error('Ảnh loopback phải cùng origin với tab nguồn.');
+  }
+  return url;
+}
+
+async function fetchCandidate(value, sourceUrl, controller) {
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
-    const url = new URL(value);
-    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw Error();
+    const url = candidateImageUrl(value, sourceUrl);
     const response = await fetch(url, {
       signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'error',
     });
@@ -92,7 +103,9 @@ export function createImageSelection(onChange) {
     current = operation;
     publish(null, 'loading', 'Đang kiểm tra ảnh…');
     try {
-      const next = await validate(await load(operation));
+      const selected = await load(operation);
+      if (current !== operation) return;
+      const next = await validate(selected);
       if (current === operation) publish(next, 'ready', 'Đã chọn ảnh: ' + next.name);
     } catch (error) {
       if (current === operation) publish(null, 'error', error.message);
@@ -101,7 +114,7 @@ export function createImageSelection(onChange) {
 
   return {
     get file() { return file; },
-    chooseCandidate: url => choose(controller => fetchCandidate(url, controller)),
+    chooseCandidate: (url, sourceUrl) => choose(controller => fetchCandidate(url, sourceUrl, controller)),
     chooseFile: selected => selected && choose(() => selected),
     clear() {
       current?.abort();
