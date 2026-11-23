@@ -21,11 +21,13 @@ test('manual retry is bound to the failed operation and cleared before reuse', (
   recovery.show(new ApiError('http', { status: 401 }), () => { retries++; });
   assert.match(status.textContent, /token/u);
   assert.equal(button.hidden, false);
+  assert.equal(recovery.hasRetry, true);
   button.dispatchEvent(new Event('click'));
   assert.equal(retries, 1);
   recovery.clear();
   button.dispatchEvent(new Event('click'));
   assert.equal(button.hidden, true);
+  assert.equal(recovery.hasRetry, false);
   assert.equal(retries, 1);
 });
 

@@ -7,13 +7,12 @@ export function validateDraft({ title, text, image }) {
   return errors;
 }
 
-export function bindFormValidation(form, { title, text, image, getImage, feedback }) {
+export function bindFormValidation(form, { title, text, image, state, feedback }) {
   const fields = { title, text, image };
   let attempted = false;
-  const get = () => ({ title: title.value, text: text.value, image: getImage() });
 
   function refresh() {
-    const errors = attempted ? validateDraft(get()) : {};
+    const errors = attempted ? validateDraft(state.get()) : {};
     for (const [key, field] of Object.entries(fields)) {
       field.setAttribute('aria-invalid', String(Boolean(errors[key])));
     }
@@ -21,13 +20,20 @@ export function bindFormValidation(form, { title, text, image, getImage, feedbac
     return errors;
   }
 
-  function changed() {
-    refresh();
-    form.dispatchEvent(new Event('afn:draft-change'));
+  function syncTextFields(draft) {
+    if (title.value !== draft.title) title.value = draft.title;
+    if (text.value !== draft.text) text.value = draft.text;
   }
 
-  title.addEventListener('input', changed);
-  text.addEventListener('input', changed);
+  syncTextFields(state.get());
+  state.subscribe(draft => {
+    syncTextFields(draft);
+    refresh();
+    form.dispatchEvent(new Event('afn:draft-change'));
+  });
+
+  title.addEventListener('input', () => state.set({ title: title.value }));
+  text.addEventListener('input', () => state.set({ text: text.value }));
   form.addEventListener('submit', event => {
     event.preventDefault();
     attempted = true;
@@ -37,7 +43,6 @@ export function bindFormValidation(form, { title, text, image, getImage, feedbac
       fields[first].focus();
       return;
     }
-    form.dispatchEvent(new CustomEvent('afn:analyze', { detail: get() }));
+    form.dispatchEvent(new CustomEvent('afn:analyze', { detail: state.get() }));
   });
-  return { get, changed };
 }
