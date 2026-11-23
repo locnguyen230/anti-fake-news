@@ -1,3 +1,4 @@
+import { createResultView } from './result-view.js';
 import { ApiError } from './api-client.js';
 import { bindErrorRecovery } from './error-recovery.js';
 import { createRequestLifecycle } from './request-lifecycle.js';
@@ -5,6 +6,7 @@ import { createRequestLifecycle } from './request-lifecycle.js';
 export function bindAnalysis({ form, configFields, client, status, result, resultDetail, retry }) {
   const lifecycle = createRequestLifecycle();
   const recovery = bindErrorRecovery(status, retry);
+  const resultView = createResultView(result, resultDetail);
   const getConfig = () => ({
     endpoint: configFields.endpoint.value,
     demoToken: configFields.demoToken.value,
@@ -13,8 +15,7 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
 
   function clearDisplay() {
     recovery.clear();
-    result.hidden = true;
-    resultDetail.textContent = '';
+    resultView.clear();
     status.textContent = '';
   }
 
@@ -34,9 +35,13 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
     try {
       const { data, mode } = await client.health(getConfig(), request.signal);
       if (!lifecycle.isCurrent(request)) return;
-      status.textContent = mode === 'mock'
-        ? 'Backend mock sẵn sàng cho dev/test.'
-        : (data.model_ready ? 'Backend báo mô hình sẵn sàng.' : 'Backend phản hồi. Mô hình chưa sẵn sàng.');
+      if (mode === 'mock') {
+        status.textContent = data.model_ready
+          ? 'Backend mock sẵn sàng cho dev/test.'
+          : 'Backend mock phản hồi nhưng chưa sẵn sàng.';
+      } else {
+        status.textContent = data.model_ready ? 'Backend báo mô hình sẵn sàng.' : 'Backend phản hồi. Mô hình chưa sẵn sàng.';
+      }
     } catch (error) {
       if (lifecycle.isCurrent(request)) recovery.show(error, checkHealth);
     } finally {
@@ -52,17 +57,8 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
       const { data, mode } = await client.predict(getConfig(), detail, request.id, request.signal);
       if (!lifecycle.isCurrent(request)) return;
       if (!lifecycle.accepts(request, data.request_id)) throw new ApiError('invalid-response');
-      const mock = mode === 'mock' || data.model_id === 'dev-mock-not-a-model';
+      const mock = resultView.render(data, mode);
       status.textContent = mock ? 'Kết quả giả lập dev/test.' : 'Backend đã trả kết quả.';
-      resultDetail.textContent = [
-        mock ? 'Giả lập dev/test. Không dùng làm kết quả nghiên cứu.' : 'Dự đoán của mô hình. Hãy đối chiếu nguồn.',
-        'Nhãn: ' + (data.label === 'fake' ? 'Nghi tin giả (fake)' : 'Nghi tin thật (real)'),
-        'Điểm fake_score: ' + data.fake_score + ' (thang 0–1, chưa hiệu chuẩn thành xác suất).',
-        'Mô hình: ' + data.model_id + ', phiên bản ' + data.model_version,
-        'Thời gian xử lý: ' + data.processing_time_ms + ' ms.',
-        data.text_truncated ? 'Mô hình đã cắt bớt văn bản.' : 'Văn bản không bị cắt.',
-      ].join(' ');
-      result.hidden = false;
     } catch (error) {
       if (!lifecycle.isCurrent(request)) return;
       if (error.kind === 'http' && error.requestId !== null && !lifecycle.accepts(request, error.requestId)) {
