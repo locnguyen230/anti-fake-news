@@ -27,7 +27,13 @@ class RecoverySnapshotsTest(unittest.TestCase):
                 )
 
             write_checksums()
-            self.assertEqual(verify_snapshots(sums, final, snapshots), sha256(final))
+            final_digest = sha256(final)
+            self.assertEqual(
+                verify_snapshots(sums, final, snapshots, expected_final_sha256=final_digest.upper()),
+                final_digest,
+            )
+            with self.assertRaisesRegex(ValueError, "independently recorded"):
+                verify_snapshots(sums, final, snapshots, expected_final_sha256="0" * 64)
 
             changed = snapshots[1].read_text(encoding="utf-8").replace('"fixture-0"', '"fixture-new"')
             snapshots[1].write_text(changed, encoding="utf-8")

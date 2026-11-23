@@ -53,7 +53,7 @@ publisher_host nhận diện cùng hostname nhà xuất bản. image_url_group l
 ## Bàn giao bằng chứng cho QA và AFN-016
 
 Đặt gói snapshot, manifest chốt, bảng đối soát pilot và `SHA256SUMS` ở nơi thành viên
-QA và AFN-016 có quyền đọc. Ghi vị trí và SHA-256 chốt trong PR khi bàn giao.
+QA và AFN-016 có quyền đọc. Ghi vị trí và SHA-256 chốt trong PR khi bàn giao. Với checksum do DATA ghi riêng, truyền thêm `--expected-final-sha256 <SHA-256>` để đối chiếu gói với bản bàn giao.
 Chạy lệnh sau với đường dẫn các snapshot thật theo thứ tự 228, 300, 350 và 400 dòng.
 
 ```
@@ -64,3 +64,8 @@ Script đối chiếu checksum, đếm ID duy nhất, kiểm tra quan hệ tập
 với manifest chốt. Kiểm thử script dùng dữ liệu tổng hợp. Chưa chạy trên gói thật vì
 chưa có đường dẫn bàn giao. Cần DATA giải thích chênh lệch giữa 230 ứng viên thu hồi
 được ít nhất một phương thức trong báo cáo pilot và 228 mẫu dùng cho batch.
+
+Kiểm tra quyền nguồn, thân bài tiếng Anh và ảnh liên quan theo
+[hợp đồng manifest AFN-001](../docs/data-contract.md) (nháp). Lưu riêng báo cáo
+đối soát ID của 230 ứng viên và lý do loại từng bản ghi để giải thích mốc 228.
+Giữ các bản JSONL thật và nội dung bài/ảnh ở nơi nhóm được phép truy cập.

@@ -47,7 +47,7 @@ def read_ids(path):
     return ids
 
 
-def verify_snapshots(checksums_path, final_path, snapshots):
+def verify_snapshots(checksums_path, final_path, snapshots, *, expected_final_sha256=None):
     checksums = read_checksums(checksums_path)
     previous = set()
     last_digest = None
@@ -65,6 +65,11 @@ def verify_snapshots(checksums_path, final_path, snapshots):
     digest = sha256(final_path)
     if digest != last_digest:
         raise ValueError("Final manifest differs from the 400-row snapshot")
+    if expected_final_sha256 is not None:
+        if not re.fullmatch(r"[a-fA-F0-9]{64}", expected_final_sha256):
+            raise ValueError("Expected final SHA-256 must contain 64 hexadecimal characters")
+        if digest != expected_final_sha256.lower():
+            raise ValueError("Final manifest differs from the independently recorded SHA-256")
     if final_path.name in checksums and checksums[final_path.name] != digest:
         raise ValueError("Final manifest SHA-256 does not match SHA256SUMS")
     return digest
@@ -74,10 +79,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checksums", type=Path, required=True)
     parser.add_argument("--final", type=Path, required=True)
+    parser.add_argument(
+        "--expected-final-sha256",
+        help="Final manifest SHA-256 recorded independently from the package",
+    )
     parser.add_argument("snapshots", type=Path, nargs=4, help="Paths in order: 228, 300, 350, 400 rows")
     args = parser.parse_args()
     try:
-        digest = verify_snapshots(args.checksums, args.final, args.snapshots)
+        digest = verify_snapshots(
+            args.checksums, args.final, args.snapshots, expected_final_sha256=args.expected_final_sha256
+        )
     except (OSError, ValueError) as error:
         parser.exit(1, f"{error}\n")
     print(f"Verified 228, 300, 350 and 400 unique, nested IDs. Final SHA-256: {digest}")
