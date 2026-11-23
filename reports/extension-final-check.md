@@ -4,7 +4,7 @@
 | --- | --- |
 | Phiên, DOM và nhiều tab | Chromium, fixture trang tĩnh/động, phiên không lẫn dữ liệu |
 | Ảnh trang và upload thủ công | Đọc bytes của ảnh hợp lệ; dùng upload khi ảnh nguồn lỗi |
-| Validation, lỗi 503 và retry | FastAPI mock và phản hồi lỗi có kiểm soát; làm lại với cùng tệp |
+| Validation, health chưa ready, lỗi 503/401 và retry | FastAPI mock và phản hồi có kiểm soát; làm lại với cùng tệp sau khi đổi token |
 | Sai UUID và phản hồi đến muộn | Fixture HTTP có kiểm soát; chỉ lượt hiện tại được hiển thị |
 | Tải lại trang phân tích | DTO nguồn được đọc lại, ảnh trong bộ nhớ được chọn lại |
 | Backend real chưa nạp model | FastAPI chạy chế độ mặc định, trả 503 và giữ bản nhập |

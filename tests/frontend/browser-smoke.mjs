@@ -124,6 +124,12 @@ try {
     await analysis.locator('#endpoint').fill(process.env.AFN_MOCK_TEST_URL);
     await analysis.locator('#check-health').click();
     await analysis.waitForFunction(() => document.querySelector('#analysis-status').textContent.includes('mock'));
+    await analysis.route(process.env.AFN_MOCK_TEST_URL + '/health', route => route.fulfill({
+      headers: { 'X-AFN-Inference-Mode': 'mock' },
+      json: { service_status: 'ok', model_ready: false, contract_version: '0.1.1' },
+    }), { times: 1 });
+    await analysis.locator('#check-health').click();
+    await analysis.waitForFunction(() => document.querySelector('#analysis-status').textContent.includes('chưa sẵn sàng'));
     await analysis.locator('#image-upload').setInputFiles(join(fixtures, 'synthetic.png'));
     await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
     await analysis.locator('#analyze').click();
@@ -232,7 +238,7 @@ try {
     await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
     await analysis.locator('#analyze').click();
     if (realEndpoint) {
-      await analysis.locator('#result').waitFor({ state: 'visible' });
+      await analysis.locator('#result').waitFor({ state: 'visible', timeout: 35_000 });
       assert.match(await analysis.locator('#result-detail').innerText(), /Dự đoán của mô hình/u);
       assert.doesNotMatch(await analysis.locator('#result-detail').innerText(), /dev-mock-not-a-model/u);
       console.log('PASS extension reaches a ready real predictor');
