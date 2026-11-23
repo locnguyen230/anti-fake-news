@@ -14,29 +14,36 @@
       <p id="source" hidden></p>
     </header>
 
-    <section aria-labelledby="article-heading">
-      <h2 id="article-heading">Bài viết</h2>
-      <p id="extraction" class="notice" role="status">Đang đọc phiên phân tích…</p>
-      <fieldset id="draft" disabled>
-        <label for="title">Tiêu đề</label>
-        <input id="title" type="text">
-        <label for="text">Nội dung bài viết</label>
-        <textarea id="text" rows="10"></textarea>
-      </fieldset>
-    </section>
+    <form id="analysis-form" novalidate>
+      <section aria-labelledby="article-heading">
+        <h2 id="article-heading">Bài viết</h2>
+        <p id="extraction" class="notice" role="status">Đang đọc phiên phân tích…</p>
+        <fieldset id="draft" disabled>
+          <label for="title">Tiêu đề</label>
+          <input id="title" type="text" aria-describedby="form-status">
+          <label for="text">Nội dung bài viết</label>
+          <textarea id="text" rows="10" aria-describedby="form-status"></textarea>
+        </fieldset>
+      </section>
 
-    <section aria-labelledby="image-heading">
-      <h2 id="image-heading">Ảnh đính kèm</h2>
-      <div id="image-candidates" hidden>
-        <p>Ảnh tìm thấy trên trang</p>
-        <ul id="candidates"></ul>
-      </div>
-      <label for="image-upload">Tải tệp JPEG hoặc PNG</label>
-      <input id="image-upload" type="file" accept="image/jpeg,image/png">
-      <p id="image-status" role="status"></p>
-      <img id="image-preview" alt="Ảnh đã chọn để phân tích" hidden>
-      <button id="remove-image" type="button" hidden>Bỏ ảnh</button>
-    </section>
+      <section aria-labelledby="image-heading">
+        <h2 id="image-heading">Ảnh đính kèm</h2>
+        <div id="image-candidates" hidden>
+          <p>Ảnh tìm thấy trên trang</p>
+          <ul id="candidates"></ul>
+        </div>
+        <label for="image-upload">Tải tệp JPEG hoặc PNG</label>
+        <input id="image-upload" type="file" accept="image/jpeg,image/png" aria-describedby="image-status form-status">
+        <p id="image-status" role="status"></p>
+        <img id="image-preview" alt="Ảnh đã chọn để phân tích" hidden>
+        <button id="remove-image" type="button" hidden>Bỏ ảnh</button>
+      </section>
+
+      <section aria-label="Phân tích">
+        <p id="form-status" role="status"></p>
+        <button id="analyze" type="submit">Phân tích</button>
+      </section>
+    </form>
   </main>
 </body>
 </html>
