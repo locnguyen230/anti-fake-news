@@ -1,9 +1,11 @@
 import { createResultView } from './result-view.js';
 import { ApiError } from './api-client.js';
+import { bindErrorRecovery } from './error-recovery.js';
 import { createRequestLifecycle } from './request-lifecycle.js';
 
-export function bindAnalysis({ form, configFields, client, status, result, resultDetail }) {
+export function bindAnalysis({ form, configFields, client, status, result, resultDetail, retry }) {
   const lifecycle = createRequestLifecycle();
+  const recovery = bindErrorRecovery(status, retry);
   const resultView = createResultView(result, resultDetail);
   const getConfig = () => ({
     endpoint: configFields.endpoint.value,
@@ -12,6 +14,7 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
   });
 
   function clearDisplay() {
+    recovery.clear();
     resultView.clear();
     status.textContent = '';
   }
@@ -21,8 +24,14 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
     clearDisplay();
   }
 
-  form.addEventListener('afn:draft-change', invalidate);
-  for (const field of Object.values(configFields)) field.addEventListener('input', invalidate);
+  function invalidateEdit() {
+    lifecycle.invalidate();
+    if (recovery.hasRetry) resultView.clear();
+    else clearDisplay();
+  }
+
+  form.addEventListener('afn:draft-change', invalidateEdit);
+  for (const field of Object.values(configFields)) field.addEventListener('input', invalidateEdit);
   addEventListener('pagehide', invalidate);
 
   async function checkHealth() {
@@ -39,10 +48,8 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
       } else {
         status.textContent = data.model_ready ? 'Backend báo mô hình sẵn sàng.' : 'Backend phản hồi. Mô hình chưa sẵn sàng.';
       }
-    } catch {
-      if (lifecycle.isCurrent(request)) {
-        status.textContent = 'Không kiểm tra được Backend. Hãy xác nhận địa chỉ và dịch vụ cục bộ.';
-      }
+    } catch (error) {
+      if (lifecycle.isCurrent(request)) recovery.show(error, checkHealth);
     } finally {
       lifecycle.finish(request);
     }
@@ -63,9 +70,7 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
       if (error.kind === 'http' && error.requestId !== null && !lifecycle.accepts(request, error.requestId)) {
         error = new ApiError('invalid-response');
       }
-      status.textContent = error.kind === 'timeout'
-        ? 'Đã hết thời gian chờ của tiện ích. Bạn có thể thử lại.'
-        : 'Yêu cầu không thành công. Hãy kiểm tra dữ liệu và Backend rồi thử lại.';
+      recovery.show(error, () => form.requestSubmit());
     } finally {
       lifecycle.finish(request);
     }
