@@ -14,7 +14,7 @@
 | CLIP ViT-B/32 chạy CPU, RAM, số chiều | [PR #68](https://github.com/ngnsusinn/anti-fake-news/pull/68): Windows x64/Python 3.13, CLIP **16/16 online + 16/16 offline**, embedding **512 chiều**, CPU 12 luồng logic, RAM khả dụng 29,7 GiB; trung vị **118,4 ms online / 84,8 ms offline mỗi ảnh** trên dữ liệu tổng hợp | Có bằng chứng smoke do PR báo cáo; cần BACKEND review, chốt Python và đối chiếu với **máy demo thực tế** nếu khác |
 | Hợp đồng API và Extension | `api-contract.md` / `inference-interface.md` v0.1.1 là bản đề xuất; #8 cảnh báo kiểm tra lại | Chờ Backend/ML/Extension đồng ý |
 | Backend scaffold | README mô tả FastAPI local; health chưa sẵn sàng, real `/predict` trả 503; mock phải bật rõ ràng | Đã có khung, **không** chứng minh suy luận thật |
-| Extension smoke | [PR #65](https://github.com/ngnsusinn/anti-fake-news/pull/65): 2/2 test phiên đạt, 3 nhóm Chromium smoke được báo cáo đạt; **ca bổ sung thất bại** vì text trong phần tử con `display:none` bị trích vào body | Chưa đạt gate trích xuất; EXTENSION sửa `extract.js`, thêm regression và QA review |
+| Extension smoke | [PR #65](https://github.com/ngnsusinn/anti-fake-news/pull/65) đã merge vào `main` tại `75a7b32`. QA chạy lại 2/2 test phiên, 3 nhóm Chromium smoke và ca hồi quy chữ ẩn bằng CSS | Đạt phạm vi trích DOM và phiên theo tab tuần 1 |
 | Quy trình/ma trận QA | Đã soạn `docs/working-agreement.md`, `docs/test-plan.md`, `tests/fixtures/README.md` | Chờ DATA review và CODEOWNER duyệt |
 
 ## 2. Đối chiếu hợp đồng, dữ liệu và bằng chứng còn thiếu
@@ -22,15 +22,15 @@
 - **Tài liệu gốc:** [DEFINE](../DEFINE.md) §3/§5/§7 yêu cầu dữ liệu hợp lệ và có ảnh; [DESIGN](../DESIGN.md) §2–4 định nghĩa TF-IDF, CLIP, Logistic Regression và ba cấu hình. Hai tài liệu chưa giải quyết xung đột tiếng Việt/tiếng Anh với [API v0.1.1](../docs/api-contract.md), và DESIGN hiện không có §8/§12 mà issue dẫn chiếu. Phiếu đăng ký đề tài trong `output/pdf/` chưa được đối chiếu nội dung ở lần rà soát này; chờ INTEGRATION xác minh văn bản gốc và ghi quyết định.
 - **DATA:** Pilot 165/400 đủ cả title/body/ảnh theo điều kiện kỹ thuật. Batch báo cáo 286/400 ứng viên body+ảnh; các mẫu chưa được thẩm định đúng bài/ảnh và quyền dùng nguồn. Báo cáo batch nêu `SHA256SUMS` nhưng chưa có đường dẫn artifact bất biến mà QA xác minh được. `event_id` chưa gán đầy đủ, nên chưa chứng minh chia theo nhóm 70/15/15 không leakage.
 - **ML:** PR #68 cung cấp checkpoint `openai/clip-vit-base-patch32` revision `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`, 512 chiều; kết quả Windows là smoke encoder bằng ảnh tổng hợp, **không** chứng minh suy luận end-to-end hoặc Macro-F1.
-- **Extension:** PR #65 có kết quả smoke và một lỗi cụ thể ở `extract.js`; chưa được QA chấp nhận.
+- **Extension:** PR #65 đã sửa lỗi lấy chữ ẩn trong `extract.js` và qua QA tại `4d0ee6d`.
 - **Backend:** `main` còn đường real-mode `/predict` trả 503; mock dev/test không phải predictor thật. Hợp đồng v0.1.1 đang chờ quyết định liên vai trò.
-- **Trạng thái issue:** #2, #3, #4, #6, #10, #11 và #15 vẫn mở tại thời điểm kiểm tra. #8 hiển thị Closed nhưng chính nội dung issue yêu cầu **kiểm tra lại** và còn checklist chưa duyệt; không coi Closed là xác nhận contract đã xong.
+- **Trạng thái issue:** #2, #3, #4, #6, #10, #11 và #15 vẫn mở tại thời điểm kiểm tra. #8 vẫn cần kiểm tra lại và còn checklist chốt hợp đồng chưa duyệt.
 
 ## 3. Các bước xác minh cần thực hiện tiếp
 
 1. Trên checkout đã cài dependency: vào `backend`, chạy `python -m pytest -q`, ghi **đúng số bài pass/fail**, phiên bản Python và commit SHA.
 2. Từ thư mục `backend`, chạy `python tests/smoke_local.py` với môi trường riêng; chỉ dùng chế độ mock tường minh để phát triển hợp đồng. Ghi chính xác `/health` 200 và `/predict` real-mode 503 với ý nghĩa thật của chúng.
-3. EXTENSION sửa lỗi nội dung bị ẩn CSS ở [PR #65](https://github.com/ngnsusinn/anti-fake-news/pull/65), thêm fixture hồi quy; QA review và chạy lại smoke phiên theo tab, ảnh tương đối, nhập thủ công.
+3. Extension đã qua QA và merge tại [PR #65](https://github.com/ngnsusinn/anti-fake-news/pull/65). Dùng commit đã merge khi nghiệm thu tích hợp.
 4. DATA bàn giao **manifest/snapshot và SHA256SUMS có quyền QA truy cập**, bản audit nguồn/quyền và nhóm sự kiện độc lập. Các số tổng đã đối soát về mặt số học nhưng chưa xác nhận byte/chữ ký bản chốt.
 5. ML/BACKEND review [PR #68](https://github.com/ngnsusinn/anti-fake-news/pull/68), thống nhất Python, xác nhận máy Windows đã đo có phải máy demo cuối cùng hay không; chạy lại smoke nếu khác cấu hình.
 
@@ -38,9 +38,9 @@
 
 ## 4. Quyết định checkpoint
 
-- **No Go đối với nghiệm thu hoàn tất tuần 1 hoặc demo mô hình thật**: đã có pilot 400 bản ghi (390 URL được gửi yêu cầu bài đầu tiên) và báo cáo 400 mẫu thu hồi, có CLIP CPU smoke; **nhưng** thiếu kiểm định quyền/nội dung và nhóm độc lập, hợp đồng chưa duyệt, Extension còn lỗi trích DOM, chưa có luồng suy luận thật.
+- **No Go đối với nghiệm thu hoàn tất tuần 1 hoặc demo mô hình thật**: đã có pilot 400 bản ghi (390 URL được gửi yêu cầu bài đầu tiên) và báo cáo 400 mẫu thu hồi, có CLIP CPU smoke; **nhưng** thiếu kiểm định quyền/nội dung và nhóm độc lập, hợp đồng chưa duyệt và chưa có luồng suy luận thật.
 - **Conditional Go cho các việc độc lập tuần 2**: tiếp tục kiểm tra schema/fixture, test hợp đồng tổng hợp, UX Extension và validator chia tập. Không tự mở Test hoặc thay đổi contract chưa duyệt.
-- **Blocker cần xử lý (đề nghị cập nhật trước checkpoint kế tiếp 30/11/2026):** DATA `locnguyen230` (#2/#3: manifest/checksum, quyền, nhóm); INTEGRATION `fulord26` (#4: protocol/ngôn ngữ); ML `0xDa1Vu` và BACKEND `Phuc1232` (#6/#8: môi trường và contract); EXTENSION `ngnsusinn` (#11: CSS-hidden regression); QA `dangnguyen0512` (thu bằng chứng và review). Xem [sổ rủi ro](../docs/risk-register.md).
+- **Blocker cần xử lý (đề nghị cập nhật trước checkpoint kế tiếp 30/11/2026):** DATA `locnguyen230` (#2/#3: manifest/checksum, quyền, nhóm); INTEGRATION `fulord26` (#4: protocol/ngôn ngữ); ML `0xDa1Vu` và BACKEND `Phuc1232` (#6/#8: môi trường và contract); QA `dangnguyen0512` (thu bằng chứng và review). Xem [sổ rủi ro](../docs/risk-register.md).
 - **Phê duyệt bắt buộc:** reviewer DATA và CODEOWNER `@ngnsusinn`. Chỉ ký checkpoint và đánh dấu #15 Done khi có URL bằng chứng thực, quyết định, ngày giờ và những giới hạn còn lại.
 
 Nguồn đối chiếu: [DEFINE](../DEFINE.md), [DESIGN](../DESIGN.md), [hợp đồng API](../docs/api-contract.md), [Issue #15](https://github.com/ngnsusinn/anti-fake-news/issues/15).
