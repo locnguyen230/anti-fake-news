@@ -10,10 +10,25 @@ export function extractArticle() {
   }
 
   function cleanText(element) {
-    const copy = element.cloneNode(true);
-    copy.querySelectorAll(EXCLUDED).forEach(node => node.remove());
-    copy.querySelectorAll('br').forEach(node => node.replaceWith(' '));
-    return copy.textContent.replace(/\s+/gu, ' ').trim();
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return getComputedStyle(node.parentElement).visibility === 'visible'
+            ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+        const style = getComputedStyle(node);
+        if (node.matches(EXCLUDED) || style.display === 'none' || style.contentVisibility === 'hidden') {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (node.matches('br') && style.visibility === 'visible') return NodeFilter.FILTER_ACCEPT;
+        return NodeFilter.FILTER_SKIP;
+      },
+    });
+    const text = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      text.push(node.nodeType === Node.TEXT_NODE ? node.data : ' ');
+    }
+    return text.join('').replace(/\s+/gu, ' ').trim();
   }
 
   const metaTitle = document.querySelector('meta[property="og:title"]')?.content;
