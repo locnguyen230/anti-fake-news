@@ -99,6 +99,11 @@ try {
   await analysis.locator('#remove-image').click();
   assert.equal(await analysis.locator('#image-preview').isHidden(), true);
   console.log('PASS candidate bytes, manual upload and preview cleanup');
+  await analysis.locator('#analyze').click();
+  assert.match(await analysis.locator('#form-status').innerText(), /Chọn một ảnh/u);
+  assert.equal(await analysis.locator('#text').inputValue(), input);
+  assert.ok(await analysis.locator('#image-upload').evaluate(node => node === document.activeElement));
+  console.log('PASS validation preserves draft and focuses the invalid field');
 
   const dynamic = await context.newPage();
   await dynamic.goto(origin + '/dynamic.html');

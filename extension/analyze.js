@@ -1,3 +1,4 @@
+import { bindFormValidation } from './modules/form-validation.js';
 import { createImageSelection } from './modules/image-selection.js';
 import { readSession } from './modules/session.js';
 
@@ -29,6 +30,12 @@ const imageSelection = createImageSelection(({ file, preview: url, message }) =>
   removeImage.hidden = !file;
   if (url) preview.src = url;
   else preview.removeAttribute('src');
+  formState.changed();
+});
+
+const formState = bindFormValidation(get('analysis-form'), {
+  title: get('title'), text: get('text'), image: upload,
+  getImage: () => imageSelection.file, feedback: get('form-status'),
 });
 
 upload.addEventListener('change', () => imageSelection.chooseFile(upload.files[0]));
