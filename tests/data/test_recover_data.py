@@ -3,8 +3,11 @@ import json
 import sys
 import tempfile
 import unittest
+from io import BytesIO
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+from PIL import Image
 
 from scripts import recover_data as recovery
 
@@ -89,6 +92,40 @@ class RecoveryResumeTest(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 recovery.prepare_pending_inputs(dataset, root / "pending", root / "raw")
+
+
+class RecoveryImageTest(unittest.TestCase):
+    def test_corrupt_download_is_not_cached(self):
+        response = MagicMock()
+        response.status_code = 200
+        response.headers = {"Content-Type": "image/png"}
+        response.iter_content.return_value = [b"\x89PNG\r\n\x1a\n" + b"corrupt"]
+        with tempfile.TemporaryDirectory() as temporary, patch.object(recovery.requests, "get") as get:
+            get.return_value.__enter__.return_value = response
+            base = Path(temporary) / "image"
+            self.assertIsNone(recovery.download_image("https://example.test/image", base))
+            self.assertEqual(list(Path(temporary).iterdir()), [])
+
+    def test_corrupt_cached_image_is_replaced_with_decodable_download(self):
+        url = "https://example.test/image"
+        image_data = BytesIO()
+        Image.new("RGB", (2, 2)).save(image_data, format="PNG")
+        response = MagicMock()
+        response.status_code = 200
+        response.headers = {"Content-Type": "image/png"}
+        response.iter_content.return_value = [image_data.getvalue()]
+
+        with tempfile.TemporaryDirectory() as temporary, patch.object(recovery.requests, "get") as get:
+            get.return_value.__enter__.return_value = response
+            article = Path(temporary) / "news content.json"
+            article.write_text(json.dumps({"top_img": url}), encoding="utf-8")
+            name = "image_" + recovery.hashlib.md5(url.encode("utf-8")).hexdigest()[:12]
+            cached = article.parent / (name + ".png")
+            cached.write_bytes(b"\x89PNG\r\n\x1a\n" + b"corrupt")
+            self.assertEqual(Path(recovery.recover_article_image(article)), cached.resolve())
+            self.assertEqual(cached.read_bytes(), image_data.getvalue())
+            self.assertEqual(Path(recovery.recover_article_image(article)), cached.resolve())
+            get.assert_called_once()
 
 
 if __name__ == "__main__":

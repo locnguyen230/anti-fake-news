@@ -43,6 +43,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import closing
 from datetime import datetime, timezone
+from io import BytesIO
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from urllib.parse import urlparse
@@ -92,6 +93,7 @@ IMAGE_LIST_KEYS = ('images', 'img', 'image_list', 'image_urls', 'image')
 
 MAX_WORKERS = 8
 REQUEST_TIMEOUT = 20
+MAX_IMAGE_PIXELS = 20_000_000
 MAX_IMAGE_BYTES = 20 * 1024 * 1024  # Tối đa 20 MB/ảnh.
 HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; FakeNewsNetRecovery/1.0)'}
 CSV_FIELDS = ('sampleid', 'pathjson', 'path_anh', 'phan_loai')
@@ -397,6 +399,20 @@ def detect_image_format(content: bytes) -> str | None:
     return None
 
 
+def is_decodable_image(source) -> bool:
+    from PIL import Image
+
+    try:
+        with Image.open(source) as image:
+            width, height = image.size
+            if width * height > MAX_IMAGE_PIXELS:
+                return False
+            image.load()
+            return True
+    except (OSError, ValueError, Image.DecompressionBombError):
+        return False
+
+
 def download_image(url: str, image_base_path: Path) -> Path | None:
     """Tải ảnh có giới hạn kích thước; thất bại không để lại file dở."""
     parsed = urlparse(url)
@@ -424,7 +440,7 @@ def download_image(url: str, image_base_path: Path) -> Path | None:
                         return None
 
         image_format = detect_image_format(bytes(data))
-        if image_format is None:
+        if image_format is None or not is_decodable_image(BytesIO(data)):
             return None
         target_path = image_base_path.with_suffix('.' + image_format)
         temporary_file.write_bytes(data)
@@ -453,7 +469,11 @@ def recover_article_image(json_path: Path) -> str:
         # Chỉ chấp nhận file ảnh đã tồn tại trong chính thư mục chứa JSON.
         for extension in ('jpg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'avif', 'heic'):
             existing_file = image_base.with_suffix('.' + extension)
-            if existing_file.is_file() and existing_file.stat().st_size > 0:
+            if (
+                existing_file.is_file()
+                and 0 < existing_file.stat().st_size <= MAX_IMAGE_BYTES
+                and is_decodable_image(existing_file)
+            ):
                 return str(existing_file.resolve())
 
         downloaded_file = download_image(url, image_base)
