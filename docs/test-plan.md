@@ -28,6 +28,7 @@ Cập nhật: 23/11/2026. **Đây là kế hoạch kiểm thử, chưa phải k�
 ## 3. Fixture và phân tách dữ liệu
 
 - Fixture tổng hợp do QA quản lý: `tests/fixtures/qa/v0.1.1/`, có [hướng dẫn nguồn gốc](../tests/fixtures/README.md).
+- Registry `manifest.json` nêu nguồn gốc và version của từng mẫu; `session-race.json` và `split-policy.json` giúp bàn giao rõ phiên và chính sách split. Có bộ sinh fixture cục bộ cho text dài/ảnh hỏng/sai MIME/ảnh quá lớn và EXIF tùy chọn.
 - Fixture API hiện có của Backend: `backend/tests/fixtures/api/v0.1.1/`, chỉ dùng phát triển hợp đồng/mock, **không** phải Test nghiên cứu hoặc bằng chứng suy luận thật.
 - **Train** dùng để fit; **Validation** dùng chọn siêu tham số/ngưỡng; **Test** giữ kín đến sau khi đóng băng và không dùng sửa giao diện, chọn mô hình, benchmark hoặc thử đi thử lại để tuning.
 - QA chỉ audit **metadata** Test trước thời điểm khóa: số lượng, hash, trùng nhóm; không dùng nội dung/nhãn/dự đoán Test để tối ưu.
@@ -38,6 +39,7 @@ Cập nhật: 23/11/2026. **Đây là kế hoạch kiểm thử, chưa phải k�
 - Với timeout: kiểm tra vẫn giữ bản nhập; việc client hủy request không bảo đảm công việc server đã dừng.
 - Với CORS: thử origin không được phép, tách riêng phép thử xác thực token vì CORS **không** phải cơ chế xác thực.
 - Mỗi lần chạy lưu: `ca | commit SHA | phiên bản fixture | môi trường | mong đợi | thực tế | PASS/FAIL/BLOCKED | URL evidence | người chạy | ngày`.
+- Kiểm tra độc lập registry bằng `python -m unittest discover -s tests/fixtures/qa -p "test_*.py" -v`; kết quả này là kiểm tra fixture, **không** thay thế chạy T01–T12 trên hệ thống thật.
 
 ## 5. Phụ thuộc trước nghiệm thu
 
