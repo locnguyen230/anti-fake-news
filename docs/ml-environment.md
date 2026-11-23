@@ -1,7 +1,6 @@
 # Môi trường ML và encoder CLIP — AFN-005 / AFN-006
 
-Trạng thái: **đã chạy smoke trên máy ML (macOS M1)**, đang chờ BACKEND review và
-kiểm tra lại trên máy Windows của nhóm. Mọi ảnh trong smoke là ảnh tổng hợp sinh
+Trạng thái: **đã chạy smoke trên macOS M1 và Windows x64**, đang chờ Backend review và xác nhận cấu hình máy demo. Mọi ảnh trong smoke là ảnh tổng hợp sinh
 trong bộ nhớ; thời gian đo được chỉ dùng để lập kế hoạch, **không** phải kết quả
 nghiên cứu hay chất lượng mô hình.
 
@@ -10,16 +9,16 @@ nghiên cứu hay chất lượng mô hình.
 Dùng chung một `.venv` với backend (bộ tiền xử lý và loader sau này nằm trong backend):
 
 ```sh
-python3 -m venv .venv
+python3.13 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.txt -r ml/requirements.txt
 .venv/bin/python -m pip check
 ```
 
-Windows: thay `.venv/bin/python` bằng `.\.venv\Scripts\python.exe`.
+Windows dùng Python 3.13 cho môi trường chung đã kiểm tra; thay `.venv/bin/python` bằng `.\.venv\Scripts\python.exe`.
 Linux: thêm `--extra-index-url https://download.pytorch.org/whl/cpu` để lấy torch bản CPU.
 
 Cài thêm `ml/requirements.txt` không đổi phiên bản nào trong `backend/requirements.txt`
-(đã đối chiếu `pip freeze`; `pip check` sạch; toàn bộ 136 test backend pass = 90 test cũ + 46 test AFN-005).
+trên Windows x64/Python 3.13.0. Hai bộ pin cài chung và `pip check` đạt.
 
 ## 2. Encoder được ghim (`configs/clip-reference.json`)
 
@@ -95,6 +94,11 @@ Kết quả ngày 2026-11-23 (4 ảnh tổng hợp, 20 lượt đo, CPU, 4 luồ
 Chạy lại `--offline` pass toàn bộ → cache cục bộ dùng được không cần mạng.
 `param_count = 151.277.313` (cả nhánh text của CLIP được nạp nhưng chỉ dùng nhánh ảnh).
 
+Kiểm tra độc lập trên Windows x64, Python 3.13.0, CPU với 6 luồng Torch:
+16/16 kiểm tra CLIP đạt ở hai chế độ online và offline, embedding 512 chiều.
+Đây là bằng chứng tương thích của môi trường chung. Xác nhận lại khi máy demo
+dùng cấu hình khác.
+
 **Phương án CPU trước khi mở rộng batch:** ~44 ms/ảnh ⇒ 400 ảnh ≈ 20–30 s trên CPU M1,
 nên trích embedding cho dataset 200–500 mẫu chạy CPU là đủ; chưa cần GPU/MPS.
 Thời gian suy luận 1 request còn xa mục tiêu trung vị 10 s (DEFINE §7). Máy Windows
@@ -114,8 +118,8 @@ của nhóm cần đo lại bằng cùng lệnh.
 
 | Việc | Owner | Ghi chú |
 | --- | --- | --- |
-| Chạy lại cài đặt + smoke trên Windows x64 / Python baseline của nhóm | ML + BACKEND | Pin hiện tại resolve trên Python 3.14; Python 3.10 có thể không có wheel cho một số bản mới (torch/numpy). Nếu lỗi, thống nhất Python 3.11/3.12 cho cả nhóm. |
+| Xác nhận môi trường demo | ML + Backend | Dùng Python 3.13 làm mốc đã kiểm tra môi trường chung. Đối chiếu máy demo nếu cấu hình khác. |
 | Xác nhận quy tắc 1.500 từ chỉ tính body, ghép `title\n body` | INTEGRATION (#4) | Điều kiện Done của #5 |
 | Backend #23 dùng lại `load_image_rgb` thay vì tự decode | BACKEND | Tránh hai bản tiền xử lý lệch nhau |
 | Fixture parity dữ liệu thật (manifest) | DATA (#16) | Fixture hiện tại là tổng hợp |
-| Ngôn ngữ đầu vào: DEFINE ghi tiếng Việt, dữ liệu FakeNewsNet + API contract là tiếng Anh | Cả nhóm | Bộ tiền xử lý không phụ thuộc ngôn ngữ, nhưng TF-IDF/CLIP huấn luyện trên tiếng Anh |
+| Chốt giao thức trước freeze | Integration + ML | [AFN-004](experiment-protocol.md) bám theo phiếu đề tài: bài viết tiếng Anh, UI tiếng Việt. |

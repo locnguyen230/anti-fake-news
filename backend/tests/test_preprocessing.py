@@ -245,6 +245,14 @@ def test_l2_normalize_rows_and_dtype():
 
 
 @needs_ml
+def test_l2_normalize_large_finite_values():
+    raw = np.array([[1e308, 1e308], [1e308, -1e308]])
+    out = pp.l2_normalize_embeddings(raw)
+    assert np.allclose(np.linalg.norm(out, axis=1), 1.0)
+    assert np.allclose(out, np.array([[1, 1], [1, -1]]) / np.sqrt(2))
+
+
+@needs_ml
 def test_l2_normalize_1d():
     out = pp.l2_normalize_embeddings([1.0, 0.0, 0.0])
     assert out.shape == (3,) and out.dtype == np.float32

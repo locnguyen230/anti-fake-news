@@ -232,10 +232,15 @@ def l2_normalize_embeddings(embeddings: Any, *, expected_dim: int | None = None)
         raise ValueError("embedding dimension mismatch")
     if not np.all(np.isfinite(arr)):
         raise NonFiniteEmbeddingError("embedding contains NaN or Inf")
-    norms = np.linalg.norm(arr, axis=-1, keepdims=True)
-    if np.any(norms <= L2_EPSILON):
+    # Scaling first avoids overflow when the finite input is squared.
+    scale = np.max(np.abs(arr), axis=-1, keepdims=True)
+    if np.any(scale == 0):
         raise NonFiniteEmbeddingError("embedding has zero norm")
-    out = (arr / norms).astype(np.dtype(EMBEDDING_DTYPE_NAME))
+    scaled = arr / scale
+    norms = np.linalg.norm(scaled, axis=-1, keepdims=True)
+    if np.any(scale <= L2_EPSILON / norms):
+        raise NonFiniteEmbeddingError("embedding has zero norm")
+    out = (scaled / norms).astype(np.dtype(EMBEDDING_DTYPE_NAME))
     if not np.all(np.isfinite(out)):
         raise NonFiniteEmbeddingError("normalised embedding is not finite")
     return out
