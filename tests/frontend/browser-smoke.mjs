@@ -124,11 +124,21 @@ try {
     await analysis.locator('#endpoint').fill(process.env.AFN_MOCK_TEST_URL);
     await analysis.locator('#check-health').click();
     await analysis.waitForFunction(() => document.querySelector('#analysis-status').textContent.includes('mock'));
+    await analysis.route(process.env.AFN_MOCK_TEST_URL + '/health', route => route.fulfill({
+      headers: { 'X-AFN-Inference-Mode': 'mock' },
+      json: { service_status: 'ok', model_ready: false, contract_version: '0.1.1' },
+    }), { times: 1 });
+    await analysis.locator('#check-health').click();
+    await analysis.waitForFunction(() => document.querySelector('#analysis-status').textContent.includes('chưa sẵn sàng'));
     await analysis.locator('#image-upload').setInputFiles(join(fixtures, 'synthetic.png'));
     await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
     await analysis.locator('#analyze').click();
     await analysis.waitForFunction(() => !document.querySelector('#result').hidden);
     assert.match(await analysis.locator('#result-detail').innerText(), /Giả lập.*dev-mock-not-a-model/u);
+    const detail = await analysis.locator('#result-detail').innerText();
+    assert.match(detail, /fake_score: 0\.42.*chưa hiệu chuẩn/u);
+    assert.match(detail, /phiên bản.*Thời gian xử lý.*Văn bản không bị cắt/u);
+    assert.equal(await analysis.locator('#retry').getAttribute('aria-describedby'), 'analysis-status');
     await analysis.locator('#text').fill(input + ' Changed.');
     assert.equal(await analysis.locator('#result').isHidden(), true);
     await analysis.locator('#text').fill(input);
@@ -147,6 +157,17 @@ try {
     await analysis.locator('#retry').click();
     await analysis.locator('#result').waitFor({ state: 'visible' });
     console.log('PASS 503 preserves the draft and manual retry reaches the mock');
+    await analysis.route(predictUrl, route => route.fulfill({
+      status: 401, json: { error_code: 'invalid_token', request_id: null },
+    }), { times: 1 });
+    await analysis.locator('#analyze').click();
+    await analysis.locator('#retry').waitFor({ state: 'visible' });
+    await analysis.locator('#demo-token').fill('fixture-updated-token');
+    assert.equal(await analysis.locator('#retry').isVisible(), true);
+    assert.equal(await analysis.locator('#text').inputValue(), beforeRetry);
+    await analysis.locator('#retry').click();
+    await analysis.locator('#result').waitFor({ state: 'visible' });
+    console.log('PASS retry remains available after editing the demo token');
 
     let releaseOld;
     let oldArrived;
@@ -217,7 +238,7 @@ try {
     await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
     await analysis.locator('#analyze').click();
     if (realEndpoint) {
-      await analysis.locator('#result').waitFor({ state: 'visible' });
+      await analysis.locator('#result').waitFor({ state: 'visible', timeout: 35_000 });
       assert.match(await analysis.locator('#result-detail').innerText(), /Dự đoán của mô hình/u);
       assert.doesNotMatch(await analysis.locator('#result-detail').innerText(), /dev-mock-not-a-model/u);
       console.log('PASS extension reaches a ready real predictor');

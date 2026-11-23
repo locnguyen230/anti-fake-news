@@ -10,20 +10,30 @@ import subprocess
 import sys
 import time
 from urllib.parse import urlsplit
-from urllib.request import urlopen
+from urllib.request import HTTPRedirectHandler, build_opener
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+class NoHealthRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def read_health(endpoint):
-    with urlopen(endpoint + "/health", timeout=0.7) as response:
+    with build_opener(NoHealthRedirects).open(endpoint + "/health", timeout=0.7) as response:
         return response.headers.get("X-AFN-Inference-Mode"), json.load(response)
 
 
 def loopback_endpoint(value):
-    parsed = urlsplit(value)
-    if parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or parsed.path not in ("", "/"):
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("Use http://127.0.0.1:<port>") from error
+    if (parsed.scheme != "http" or parsed.hostname != "127.0.0.1"
+            or parsed.path not in ("", "/") or (port is not None and port == 0)):
         raise argparse.ArgumentTypeError("Use http://127.0.0.1:<port>")
     if parsed.username or parsed.password or parsed.query or parsed.fragment:
         raise argparse.ArgumentTypeError("The endpoint cannot contain credentials, a query or a fragment")
@@ -79,7 +89,10 @@ def main():
         environment.pop(variable, None)
 
     if args.real_endpoint:
-        mode, health = read_health(args.real_endpoint)
+        try:
+            mode, health = read_health(args.real_endpoint)
+        except (OSError, ValueError):
+            parser.error("Could not read health from the configured loopback endpoint")
         if mode != "real" or health.get("model_ready") is not True:
             parser.error("The real endpoint must advertise mode=real and model_ready=true")
         environment["AFN_REAL_TEST_URL"] = args.real_endpoint
