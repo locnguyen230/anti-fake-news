@@ -120,18 +120,21 @@ try {
   assert.ok(await analysis.locator('#text').evaluate(node => node === document.activeElement));
   assert.ok(await analysis.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   console.log('PASS keyboard focus and narrow viewport layout');
+  const localToken = process.env.AFN_LOCAL_TEST_TOKEN;
   if (process.env.AFN_MOCK_TEST_URL) {
+    assert.ok(localToken, 'The local smoke runner must provide a demo token');
     await analysis.locator('#endpoint').fill(process.env.AFN_MOCK_TEST_URL);
     await analysis.locator('#check-health').click();
     await analysis.waitForFunction(() => document.querySelector('#analysis-status').textContent.includes('mock'));
     await analysis.route(process.env.AFN_MOCK_TEST_URL + '/health', route => route.fulfill({
       headers: { 'X-AFN-Inference-Mode': 'mock' },
-      json: { service_status: 'ok', model_ready: false, contract_version: '0.1.1' },
+      json: { service_status: 'ok', model_ready: false, contract_version: '0.2.0' },
     }), { times: 1 });
     await analysis.locator('#check-health').click();
     await analysis.waitForFunction(() => document.querySelector('#analysis-status').textContent.includes('chưa sẵn sàng'));
     await analysis.locator('#image-upload').setInputFiles(join(fixtures, 'synthetic.png'));
     await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
+    await analysis.locator('#demo-token').fill(localToken);
     await analysis.locator('#analyze').click();
     await analysis.waitForFunction(() => !document.querySelector('#result').hidden);
     assert.match(await analysis.locator('#result-detail').innerText(), /Giả lập.*dev-mock-not-a-model/u);
@@ -157,12 +160,13 @@ try {
     await analysis.locator('#retry').click();
     await analysis.locator('#result').waitFor({ state: 'visible' });
     console.log('PASS 503 preserves the draft and manual retry reaches the mock');
-    await analysis.route(predictUrl, route => route.fulfill({
-      status: 401, json: { error_code: 'invalid_token', request_id: null },
-    }), { times: 1 });
+    await analysis.locator('#demo-token').fill('');
+    const unauthorized = analysis.waitForResponse(response =>
+      response.url() === predictUrl && response.status() === 401);
     await analysis.locator('#analyze').click();
+    await unauthorized;
     await analysis.locator('#retry').waitFor({ state: 'visible' });
-    await analysis.locator('#demo-token').fill('fixture-updated-token');
+    await analysis.locator('#demo-token').fill(localToken);
     assert.equal(await analysis.locator('#retry').isVisible(), true);
     assert.equal(await analysis.locator('#text').inputValue(), beforeRetry);
     await analysis.locator('#retry').click();
@@ -233,7 +237,9 @@ try {
   const notReadyEndpoint = process.env.AFN_NOT_READY_TEST_URL;
   if (realEndpoint || notReadyEndpoint) {
     await analysis.locator('#endpoint').fill(realEndpoint || notReadyEndpoint);
-    await analysis.locator('#demo-token').fill(process.env.AFN_REAL_TEST_TOKEN || '');
+    const demoToken = realEndpoint ? process.env.AFN_REAL_TEST_TOKEN : localToken;
+    assert.ok(demoToken, 'The real backend smoke requires a demo token');
+    await analysis.locator('#demo-token').fill(demoToken);
     await analysis.locator('#image-upload').setInputFiles(join(fixtures, 'synthetic.png'));
     await analysis.waitForFunction(() => !document.querySelector('#image-preview').hidden);
     await analysis.locator('#analyze').click();

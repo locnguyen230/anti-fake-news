@@ -17,7 +17,7 @@ và tắt chúng sau kiểm thử. Có thể đặt AFN_PLAYWRIGHT_PATH theo doc
 
 Cần #37/#38 và artifact/model đã khóa ở #49 để chạy qua predictor thật. Chạy
 python scripts/test_extension_smoke.py --real-endpoint http://127.0.0.1:8000.
-Truyền token cục bộ qua biến môi trường AFN_REAL_TEST_TOKEN khi Backend yêu cầu.
+Truyền token cục bộ của Backend qua biến môi trường AFN_REAL_TEST_TOKEN.
 Lệnh yêu cầu health báo mode real và model_ready=true. Dùng fixture tổng hợp
 để kiểm tra luồng giao diện, không đo chất lượng nghiên cứu. Ghi phiên bản
 backend/model và bằng chứng UI ở checkpoint #45/#49 trước khi nghiệm thu.
