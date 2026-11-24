@@ -9,18 +9,22 @@ Mọi điểm số trên fixture chỉ là smoke test (`evidence_kind: FIXTURE_S
 
 | Đầu vào | Dạng | Ghi chú |
 | --- | --- | --- |
-| Manifest | JSONL `afn-manifest-v1` ([data-contract.md](data-contract.md)) | Chỉ dùng dòng `status: accepted` |
-| Split | CSV có header `sample_id,split`, giá trị `train` / `validation` / `test` | **Đề xuất interface cho DATA #18** |
+| Manifest | JSONL `afn-manifest-v1` ([data-contract.md](data-contract.md)) | Chỉ chứa payload Train/Validation đã `accepted` |
+| Split audit | CSV có đúng ba cột `sample_id,split,group_id` | Đề xuất giao diện cho DATA #18. Mỗi mẫu Test chỉ có `split=test` và group ID không chứa nhãn; để trống `sample_id`. |
 | Ảnh | `image.path` tương đối so với `--image-root` (mặc định là thư mục chứa manifest) | SHA-256 được đối chiếu với manifest |
 | Tham số | [`configs/experiment.yaml`](../configs/experiment.yaml) | Protocol AFN-004 + khối `text_features`, `image_features`, `fusion` |
 
-Không có đường dẫn máy nào được ghi cứng. Loader kiểm tra: schema version, `sample_id` không trùng,
-mọi id trong split phải là mẫu accepted, nhãn hợp lệ, **không có group nằm ở nhiều split**.
+Loader đối chiếu tập ID giữa manifest và các dòng split có ID, kiểm tra trạng thái accepted,
+nhãn hợp lệ và group ID khớp trên từng mẫu. Mọi dòng split phải có group ID đã audit.
+Loader phát hiện group xuất hiện ở nhiều split, kể cả group của các dòng Test đã ẩn ID.
 
 ## Khóa tập Test
 
-- `load_dataset` mặc định chỉ nạp Train + Validation. Nếu yêu cầu `test` mà không có
-  `allow_test=True` thì raise `TestSplitLockedError`. Dòng Test chỉ được **đếm**, không được đọc nội dung.
+- Trước khi #49 duyệt freeze, DATA bàn giao manifest chỉ chứa Train/Validation, ảnh tương ứng và
+  CSV audit đã ẩn ID của Test. Khóa `source:label:source_id` có chứa nhãn nên cần giữ riêng cùng
+  payload Test. Runner chỉ nhận đường dẫn của gói bàn giao này và đếm số mẫu Test từ CSV audit.
+- Loader từ chối CSV có ID Test trước khi mở manifest. Sau #49, #50 có thể dùng manifest/split đã
+  cấp quyền, yêu cầu split `test` và truyền `allow_test=True`.
 - `ml.run_experiments` không có tùy chọn nào để mở Test và từ chối dataset có chứa Test.
   Chấm Test là lệnh riêng của #50, chỉ chạy sau khi #49 ký freeze ([working-agreement.md](working-agreement.md)).
 - Chặn fit sai tập: TF-IDF và Logistic Regression chỉ fit trên Train (`FitOnNonTrainError`).
@@ -54,7 +58,7 @@ entry hỏng sẽ bị bỏ qua và tính lại. Mặc định ở `cache/embedd
 ## Lệnh chạy
 
 ```sh
-# Dữ liệu tổng hợp (manifest + split + ảnh PNG sinh ra, is_fixture: true)
+# Dữ liệu tổng hợp (manifest Train/Validation + split audit + ảnh PNG, is_fixture: true)
 .venv/bin/python -m ml.fixtures --out cache/ml-fixture
 
 # Ba cấu hình, chỉ Train/Validation
@@ -90,6 +94,7 @@ chỉ chứng minh pipeline chạy đúng, không nói gì về chất lượng 
 
 - **Audit #29 (QA):** lệnh Train/Val là `ml.run_experiments` ở trên. Bằng chứng không rò rỉ:
   `tests/test_fusion.py::test_classifiers_are_fit_on_train_rows_only`, `tests/test_text_pipeline.py::test_test_split_is_locked`.
-- **DATA #18:** xác nhận định dạng split CSV `sample_id,split`, hoặc đề xuất dạng khác.
+- **DATA #18:** xác nhận giao diện bàn giao manifest Train/Validation và CSV audit
+  `sample_id,split,group_id`, kèm checksum. Test giữ riêng đến #49/#50.
 - **#34:** chạy runner trên manifest/split thật sau audit; **#35:** lưu artifact (chưa làm ở đây).
 - **Integration:** xác nhận khối `text_features` / `image_features` / `fusion` mới thêm vào `experiment.yaml`.

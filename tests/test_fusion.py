@@ -84,8 +84,9 @@ def test_classifiers_are_fit_on_train_rows_only(dataset, ml_config, fake_encoder
 
 
 def test_runner_refuses_test_rows(ml_fixture, ml_config, fake_encoder):
-    unlocked = load_dataset(ml_fixture["manifest"], ml_fixture["split"],
+    unlocked = load_dataset(ml_fixture["unlocked_manifest"], ml_fixture["unlocked_split"],
                             splits=("train", "validation", "test"), allow_test=True)
+    assert len(unlocked.rows("test")) == 6
     with pytest.raises(PermissionError):
         run_all(unlocked, ml_config, fake_encoder)
 

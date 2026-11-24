@@ -1,8 +1,8 @@
 """Synthetic, self-contained Train/Validation/Test fixture for ML smoke tests.
 
-Writes an ``afn-manifest-v1`` JSONL (``is_fixture: true``), a ``sample_id,split``
-CSV and generated PNG images. Contains no research data; any score obtained on
-it is a pipeline smoke check only.
+Writes Train/Validation payload, split audit metadata, and generated PNG images.
+Separate synthetic files exercise the post-freeze Test loader. Any score
+obtained on these fixtures is a pipeline smoke check only.
 
     .venv/bin/python -m ml.fixtures --out cache/ml-fixture
 """
@@ -49,6 +49,7 @@ def write_synthetic_dataset(out_dir: Path | str, *, seed: int = 42,
     out = Path(out_dir)
     (out / "images").mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
+    group_rng = np.random.default_rng(seed + 1)
     counts = counts or FIXTURE_SPLIT_COUNTS
     rows, assignment = [], []
     for label in ("fake", "real"):
@@ -57,6 +58,7 @@ def write_synthetic_dataset(out_dir: Path | str, *, seed: int = 42,
             for _ in range(n):
                 source_id = f"fx-{label}-{idx:03d}"
                 sid = f"politifact:{label}:{source_id}"
+                group_id = group_rng.bytes(16).hex()
                 image_bytes = _png(rng, label)
                 rel = f"images/{source_id}.png"
                 (out / rel).write_bytes(image_bytes)
@@ -74,24 +76,38 @@ def write_synthetic_dataset(out_dir: Path | str, *, seed: int = 42,
                     "body": _text(rng, label, int(rng.integers(20, 60))),
                     "retrieved_at": "2026-11-23T00:00:00Z",
                     "event_id": None,
-                    "group_id": f"fx-group-{label}-{idx:03d}",
+                    "group_id": group_id,
                     "exclusion_reason": None,
                     "rights": {"status": "redistributable", "evidence": "Synthetic ML fixture"},
                     "image": {"path": rel, "media_type": "image/png",
                               "sha256": hashlib.sha256(image_bytes).hexdigest()},
                 })
-                assignment.append((sid, split))
+                assignment.append((sid, split, group_id))
                 idx += 1
-    manifest = out / "manifest.jsonl"
-    with manifest.open("w", encoding="utf-8") as fh:
-        for row in rows:
-            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
-    split_path = out / "split.csv"
-    with split_path.open("w", encoding="utf-8", newline="") as fh:
-        writer = csv.writer(fh)
-        writer.writerow(["sample_id", "split"])
-        writer.writerows(sorted(assignment))
-    return {"manifest": manifest, "split": split_path, "image_root": out}
+    paths = {
+        "manifest": out / "manifest.jsonl",
+        "split": out / "split.csv",
+        "unlocked_manifest": out / "manifest-unlocked.jsonl",
+        "unlocked_split": out / "split-unlocked.csv",
+        "image_root": out,
+    }
+    for include_test, manifest, split_path in (
+        (False, paths["manifest"], paths["split"]),
+        (True, paths["unlocked_manifest"], paths["unlocked_split"]),
+    ):
+        split_rows = []
+        with manifest.open("w", encoding="utf-8") as fh:
+            for row, (sid, split, group_id) in zip(rows, assignment, strict=True):
+                if include_test or split != "test":
+                    fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+                    split_rows.append((sid, split, group_id))
+                else:
+                    split_rows.append(("", split, group_id))
+        with split_path.open("w", encoding="utf-8", newline="") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(["sample_id", "split", "group_id"])
+            writer.writerows(sorted(split_rows))
+    return paths
 
 
 def main(argv: list[str] | None = None) -> int:

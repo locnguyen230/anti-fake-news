@@ -1,10 +1,8 @@
 """Shared data loading, Test guard and Validation selection (AFN-019/020/021).
 
-Inputs are always given as paths (manifest JSONL, split CSV, image root); no
-machine path is hard-coded. Only ``status == "accepted"`` manifest rows are
-used. The Test split is locked: loaders refuse to materialise it unless the
-caller passes ``allow_test=True``, which only the post-freeze evaluation
-(#50, after #49 sign-off) may do.
+The Train/Validation manifest contains only accepted Train/Validation rows.
+The split CSV audits groups across all splits and omits Test sample IDs until
+the post-freeze evaluation (#50, after #49 sign-off).
 """
 
 from __future__ import annotations
@@ -109,21 +107,39 @@ class Dataset:
         return any(s.is_fixture for rows in self.splits.values() for s in rows)
 
 
-def read_split_file(path: Path | str) -> dict[str, str]:
-    """CSV with header ``sample_id,split`` (proposed interface for DATA #18)."""
-    mapping: dict[str, str] = {}
+def read_split_file(
+    path: Path | str, *, include_test: bool,
+) -> tuple[dict[str, tuple[str, str]], int]:
+    """Return visible sample assignments and the number of locked Test rows."""
+    mapping: dict[str, tuple[str, str]] = {}
+    group_split: dict[str, str] = {}
+    locked_test_count = 0
     with Path(path).open(encoding="utf-8", newline="") as fh:
         reader = csv.DictReader(fh)
-        if reader.fieldnames is None or not {"sample_id", "split"} <= set(reader.fieldnames):
-            raise DataContractError("split file needs columns sample_id,split")
-        for row in reader:
-            sid, split = row["sample_id"].strip(), row["split"].strip()
+        fields = {"sample_id", "split", "group_id"}
+        if reader.fieldnames is None or set(reader.fieldnames) != fields or len(reader.fieldnames) != len(fields):
+            raise DataContractError("split file needs exactly the columns sample_id,split,group_id")
+        for line_no, row in enumerate(reader, 2):
+            if None in row or None in row.values():
+                raise DataContractError(f"split line {line_no}: expected exactly three fields")
+            sid, split, gid = (row[key].strip() for key in ("sample_id", "split", "group_id"))
             if split not in SPLITS:
-                raise DataContractError(f"unknown split '{split}' for {sid}")
+                raise DataContractError(f"split line {line_no}: unknown split '{split}'")
+            if not gid:
+                raise DataContractError(f"split line {line_no}: group_id is required")
+            if group_split.setdefault(gid, split) != split:
+                raise DataContractError(f"group '{gid}' spans several splits")
+            if split == "test" and not include_test:
+                if sid:
+                    raise TestSplitLockedError("Test sample IDs must be withheld before the #49 freeze")
+                locked_test_count += 1
+                continue
+            if not sid:
+                raise DataContractError(f"split line {line_no}: sample_id is required")
             if sid in mapping:
                 raise DataContractError(f"duplicate sample_id in split file: {sid}")
-            mapping[sid] = split
-    return mapping
+            mapping[sid] = split, gid
+    return mapping, locked_test_count
 
 
 def load_dataset(
@@ -134,70 +150,63 @@ def load_dataset(
     splits: Sequence[str] = TRAIN_VAL,
     allow_test: bool = False,
 ) -> Dataset:
-    """Load accepted manifest rows assigned to ``splits``.
-
-    Validates: schema version, unique ids, every split id is an accepted
-    manifest row, labels, no group spanning several splits. Test rows are only
-    counted (never parsed into samples) unless ``allow_test`` is True.
-    """
-    if "test" in splits and not allow_test:
+    """Load the authorized payload and audit group assignments from the split CSV."""
+    include_test = "test" in splits
+    if include_test and not allow_test:
         raise TestSplitLockedError("Test is locked until the #49 freeze sign-off")
     unknown = set(splits) - set(SPLITS)
     if unknown:
         raise DataContractError(f"unknown splits: {sorted(unknown)}")
 
-    assignment = read_split_file(split_path)
+    assignment, locked_test_count = read_split_file(split_path, include_test=include_test)
     root = Path(image_root) if image_root is not None else Path(manifest_path).parent
-    accepted: dict[str, dict] = {}
     seen: set[str] = set()
+    out: dict[str, list[Sample]] = {split: [] for split in splits}
+    locked = {"test": locked_test_count} if locked_test_count else {}
     with Path(manifest_path).open(encoding="utf-8") as fh:
         for line_no, line in enumerate(fh, 1):
             if not line.strip():
                 continue
-            row = json.loads(line)
-            if row.get("schema_version") != MANIFEST_SCHEMA_VERSION:
+            try:
+                row = json.loads(line)
+            except ValueError as error:
+                raise DataContractError(f"line {line_no}: invalid manifest JSON") from error
+            if not isinstance(row, dict) or row.get("schema_version") != MANIFEST_SCHEMA_VERSION:
                 raise DataContractError(f"line {line_no}: unexpected schema_version")
-            sid = row["sample_id"]
+            sid = row.get("sample_id")
+            if not isinstance(sid, str) or sid not in assignment:
+                raise DataContractError(f"line {line_no}: manifest row has no visible split assignment")
             if sid in seen:
                 raise DataContractError(f"duplicate sample_id in manifest: {sid}")
             seen.add(sid)
-            if row.get("status") == "accepted":
-                accepted[sid] = row
+            split, group_id = assignment[sid]
+            if row.get("status") != "accepted":
+                raise DataContractError(f"manifest row is not accepted: {sid}")
+            if row.get("group_id") != group_id:
+                raise DataContractError(f"missing or mismatched manifest group_id for {sid}")
+            if split not in out:
+                locked[split] = locked.get(split, 0) + 1
+                continue
+            if row.get("label") not in LABELS:
+                raise DataContractError(f"bad label for {sid}")
+            image = row.get("image") or {}
+            out[split].append(Sample(
+                sample_id=sid,
+                label=row["label"],
+                split=split,
+                title=row.get("title"),
+                body=row["body"],
+                group_id=group_id,
+                image_path=(root / image["path"]) if image.get("path") else None,
+                image_sha256=image.get("sha256"),
+                is_fixture=bool(row.get("is_fixture")),
+            ))
 
-    missing = sorted(set(assignment) - set(accepted))
+    missing = sorted(assignment.keys() - seen)
     if missing:
-        raise DataContractError(f"split references non-accepted/missing ids: {missing[:5]}")
-
-    group_split: dict[str, str] = {}
-    for sid, split in assignment.items():
-        gid = accepted[sid].get("group_id")
-        if gid is None:
-            continue
-        if group_split.setdefault(gid, split) != split:
-            raise DataContractError(f"group '{gid}' spans several splits")
-
-    out: dict[str, list[Sample]] = {s: [] for s in splits}
-    locked: dict[str, int] = {}
-    for sid in sorted(assignment):
-        split = assignment[sid]
-        if split not in out:
-            locked[split] = locked.get(split, 0) + 1
-            continue
-        row = accepted[sid]
-        if row["label"] not in LABELS:
-            raise DataContractError(f"bad label for {sid}")
-        image = row.get("image") or {}
-        out[split].append(Sample(
-            sample_id=sid,
-            label=row["label"],
-            split=split,
-            title=row.get("title"),
-            body=row["body"],
-            group_id=row.get("group_id"),
-            image_path=(root / image["path"]) if image.get("path") else None,
-            image_sha256=image.get("sha256"),
-            is_fixture=bool(row.get("is_fixture")),
-        ))
+        raise DataContractError(f"split references missing manifest ids: {missing[:5]}")
+    for rows in out.values():
+        rows.sort(key=lambda sample: sample.sample_id)
     return Dataset(out, sha256_file(manifest_path), sha256_file(split_path), locked)
 
 

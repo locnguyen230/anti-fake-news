@@ -86,10 +86,21 @@ def test_text_only_end_to_end_on_fixture(ml_fixture, ml_config):
     json.dumps(result)  # serialisable run log
 
 
-def test_test_split_is_locked(ml_fixture):
+def test_test_split_is_locked(ml_fixture, monkeypatch):
+    from pathlib import Path
+
+    original_open = Path.open
+
+    def guard_test_payload(path, *args, **kwargs):
+        assert path != ml_fixture["unlocked_manifest"], "opened Test payload before freeze"
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", guard_test_payload)
     with pytest.raises(TestSplitLockedError):
         load_dataset(ml_fixture["manifest"], ml_fixture["split"],
                      splits=("train", "validation", "test"))
+    with pytest.raises(TestSplitLockedError, match="sample IDs"):
+        load_dataset(ml_fixture["unlocked_manifest"], ml_fixture["unlocked_split"])
     dataset = load_dataset(ml_fixture["manifest"], ml_fixture["split"])
     assert "test" not in dataset.splits
     assert dataset.locked_counts == {"test": 6}
@@ -113,26 +124,53 @@ def _rewrite_split(path, mutate):
 
 
 def test_split_referencing_unknown_id_rejected(ml_fixture):
-    _rewrite_split(ml_fixture["split"], lambda r: r + [["politifact:fake:nope", "train"]])
-    with pytest.raises(DataContractError):
+    _rewrite_split(ml_fixture["split"], lambda r: r + [["politifact:fake:nope", "train", "unused"]])
+    with pytest.raises(DataContractError, match="missing manifest ids"):
         load_dataset(ml_fixture["manifest"], ml_fixture["split"])
 
 
 def test_duplicate_split_id_rejected(ml_fixture):
-    _rewrite_split(ml_fixture["split"], lambda r: r + [r[1]])
-    with pytest.raises(DataContractError):
+    _rewrite_split(ml_fixture["split"], lambda r: r + [next(row for row in r[1:] if row[0])])
+    with pytest.raises(DataContractError, match="duplicate sample_id"):
         load_dataset(ml_fixture["manifest"], ml_fixture["split"])
 
 
-def test_group_spanning_splits_rejected(ml_fixture):
+def test_test_group_overlapping_train_rejected_without_test_payload(ml_fixture):
+    def share_train_group(rows):
+        train_group = next(row[2] for row in rows[1:] if row[1] == "train")
+        next(row for row in rows[1:] if row[1] == "test")[2] = train_group
+        return rows
+
+    _rewrite_split(ml_fixture["split"], share_train_group)
+    with pytest.raises(DataContractError, match="spans several splits"):
+        load_dataset(ml_fixture["manifest"], ml_fixture["split"])
+
+
+def test_missing_group_in_split_rejected(ml_fixture):
+    def remove_group(rows):
+        rows[1][2] = " "
+        return rows
+
+    _rewrite_split(ml_fixture["split"], remove_group)
+    with pytest.raises(DataContractError, match="group_id is required"):
+        load_dataset(ml_fixture["manifest"], ml_fixture["split"])
+
+
+@pytest.mark.parametrize("group_id", [None, "", "mismatched"])
+def test_missing_or_mismatched_manifest_group_rejected(ml_fixture, group_id):
     lines = ml_fixture["manifest"].read_text(encoding="utf-8").splitlines()
     rows = [json.loads(line) for line in lines]
-    for row in rows:
-        row["group_id"] = "one-big-group"
+    rows[0]["group_id"] = group_id
+    rows[0]["is_fixture"] = False
     ml_fixture["manifest"].write_text("\n".join(json.dumps(r) for r in rows) + "\n",
                                       encoding="utf-8")
-    with pytest.raises(DataContractError, match="spans"):
+    with pytest.raises(DataContractError, match="missing or mismatched manifest group_id"):
         load_dataset(ml_fixture["manifest"], ml_fixture["split"])
+
+
+def test_premature_full_manifest_rejected(ml_fixture):
+    with pytest.raises(DataContractError, match="no visible split assignment"):
+        load_dataset(ml_fixture["unlocked_manifest"], ml_fixture["split"])
 
 
 # ----------------------------------------------------------------- selection
