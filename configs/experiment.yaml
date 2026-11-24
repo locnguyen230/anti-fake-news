@@ -37,3 +37,18 @@ logistic_regression:
   random_state: 42
 fit_split: train
 refit_on_train_and_validation: false
+# Feature parameters added by ML for AFN-019/020/021 (values from the issues);
+# Integration to confirm together with the rest of this proposed protocol.
+text_features:
+  ngram_range: [1, 2]
+  max_features: 5000
+  min_df: 2
+  sublinear_tf: true
+  norm: l2
+  lowercase: true
+image_features:
+  reference: configs/clip-reference.json
+  batch_size: 16
+fusion:
+  order: [text, image]
+  dtype: float64
