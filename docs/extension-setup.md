@@ -27,6 +27,7 @@ $env:AFN_EXTENSION_UNPACKED = (Resolve-Path release/extension).Path
 python scripts/test_extension_smoke.py
 ```
 
-Lệnh trên kiểm tra Chromium, FastAPI mock và luồng real-mode 503. Rehearsal
+Lệnh trên kiểm tra Chromium, FastAPI mock và luồng real-mode 503 với token
+thử nghiệm do runner tạo. Rehearsal
 với mô hình đã khóa dùng gói Backend #54 và lệnh ở
 [biên bản hồi quy](../reports/extension-final-check.md).

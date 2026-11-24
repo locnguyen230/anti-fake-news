@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+from secrets import token_urlsafe
 import socket
 import subprocess
 import sys
@@ -41,12 +42,17 @@ def loopback_endpoint(value):
 
 
 @contextmanager
-def run_backend(mode):
+def run_backend(mode, demo_token):
     with socket.socket() as socket_ref:
         socket_ref.bind(("127.0.0.1", 0))
         port = str(socket_ref.getsockname()[1])
     endpoint = "http://127.0.0.1:" + port
-    environment = dict(os.environ, AFN_ENVIRONMENT="test", AFN_PREDICTOR_MODE=mode)
+    environment = dict(
+        os.environ,
+        AFN_ENVIRONMENT="test",
+        AFN_PREDICTOR_MODE=mode,
+        AFN_DEMO_TOKEN=demo_token,
+    )
     process = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", port],
         cwd=ROOT / "backend",
@@ -85,10 +91,17 @@ def main():
     parser.add_argument("--real-endpoint", type=loopback_endpoint, help="Locally running Backend with a locked model")
     args = parser.parse_args()
     environment = os.environ.copy()
-    for variable in ("AFN_MOCK_TEST_URL", "AFN_NOT_READY_TEST_URL", "AFN_REAL_TEST_URL"):
+    for variable in (
+        "AFN_LOCAL_TEST_TOKEN",
+        "AFN_MOCK_TEST_URL",
+        "AFN_NOT_READY_TEST_URL",
+        "AFN_REAL_TEST_URL",
+    ):
         environment.pop(variable, None)
 
     if args.real_endpoint:
+        if not environment.get("AFN_REAL_TEST_TOKEN"):
+            parser.error("Set AFN_REAL_TEST_TOKEN for the configured real endpoint")
         try:
             mode, health = read_health(args.real_endpoint)
         except (OSError, ValueError):
@@ -98,8 +111,13 @@ def main():
         environment["AFN_REAL_TEST_URL"] = args.real_endpoint
         return run_chromium(environment)
 
-    with run_backend("mock") as mock, run_backend("real") as not_ready:
-        environment.update(AFN_MOCK_TEST_URL=mock, AFN_NOT_READY_TEST_URL=not_ready)
+    demo_token = token_urlsafe(32)
+    with run_backend("mock", demo_token) as mock, run_backend("real", demo_token) as not_ready:
+        environment.update(
+            AFN_MOCK_TEST_URL=mock,
+            AFN_NOT_READY_TEST_URL=not_ready,
+            AFN_LOCAL_TEST_TOKEN=demo_token,
+        )
         return run_chromium(environment)
 
 

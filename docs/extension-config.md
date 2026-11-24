@@ -10,6 +10,8 @@ tạo UUID và gửi multipart để trình duyệt tự đặt boundary. Servic
 gửi request. Tab giữ tệp trong bộ nhớ để thử lại.
 
 Để phát triển nội bộ, xem [cách bật mock](dev-mock.md). Backend mock được đánh dấu
-trên giao diện và có thể dùng token trống. Chế độ mặc định hiện trả 503 khi chưa
-có model thật. Bàn giao từ v0.1.1 sang model thật theo #37/#38; giao diện kết quả
+trên giao diện. Từ hợp đồng v0.2.0, cả chế độ mock và real đều yêu cầu nhập token
+trùng với `AFN_DEMO_TOKEN` của Backend. Token thiếu hoặc sai trả 401. Chế độ real
+trả 503 nếu token và dữ liệu hợp lệ nhưng model chưa sẵn sàng. Bàn giao model thật
+theo #37/#38; giao diện kết quả
 ở module result-view chỉ nhận dữ liệu đã qua kiểm tra request. Bàn giao nội dung và review UI cuối ở #40. Hợp đồng và form-state tiếp tục được đối chiếu ở #8/#12.
