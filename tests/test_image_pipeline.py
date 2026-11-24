@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 
 from app.preprocessing import NonFiniteEmbeddingError
-from conftest import FakeImageEncoder
 from ml.common import DataContractError, load_dataset
 from ml.extract_embeddings import EmbeddingCache, EmbeddingSet, cache_key, extract_embeddings
 from ml.train_image import build_image_features, run_image_only
@@ -18,8 +17,8 @@ def dataset(ml_fixture):
     return load_dataset(ml_fixture["manifest"], ml_fixture["split"], ml_fixture["image_root"])
 
 
-def test_cache_key_changes_with_image_checkpoint_processor_and_preprocessing():
-    base = FakeImageEncoder().identity
+def test_cache_key_changes_with_image_checkpoint_processor_and_preprocessing(fake_encoder):
+    base = fake_encoder.identity
     key = cache_key("a" * 64, base)
     assert cache_key("a" * 64, dict(base)) == key
     assert cache_key("b" * 64, base) != key
@@ -34,15 +33,15 @@ def test_embeddings_shape_norm_dtype_and_order(dataset, fake_encoder):
     assert emb.matrix.dtype == np.float32
     assert np.allclose(np.linalg.norm(emb.matrix, axis=1), 1.0, atol=1e-6)
     assert emb.sample_ids == [s.sample_id for s in train]
-    # Row i belongs to sample i: re-embedding one sample alone gives the same row.
-    single = extract_embeddings([train[7]], FakeImageEncoder())
-    assert np.allclose(single.matrix[0], emb.matrix[7], atol=1e-6)
     assert fake_encoder.calls == 6  # ceil(28 / 5) batches
+    # Row i belongs to sample i: re-embedding one sample alone gives the same row.
+    single = extract_embeddings([train[7]], fake_encoder)
+    assert np.allclose(single.matrix[0], emb.matrix[7], atol=1e-6)
 
 
-def test_cache_hit_skips_encoder_and_returns_same_vectors(dataset, tmp_path):
+def test_cache_hit_skips_encoder_and_returns_same_vectors(dataset, tmp_path, fake_encoder_factory):
     rows = dataset.rows("train")
-    first_enc, second_enc = FakeImageEncoder(), FakeImageEncoder()
+    first_enc, second_enc = fake_encoder_factory(), fake_encoder_factory()
     cache = EmbeddingCache(tmp_path / "emb", first_enc.dim)
     first = extract_embeddings(rows, first_enc, cache=cache)
     second = extract_embeddings(rows, second_enc, cache=cache)
@@ -50,29 +49,30 @@ def test_cache_hit_skips_encoder_and_returns_same_vectors(dataset, tmp_path):
     assert np.array_equal(first.matrix, second.matrix)
 
 
-def test_cache_not_reused_when_checkpoint_changes(dataset, tmp_path):
+def test_cache_not_reused_when_checkpoint_changes(dataset, tmp_path, fake_encoder_factory):
     rows = dataset.rows("validation")
-    cache = EmbeddingCache(tmp_path / "emb", FakeImageEncoder.dim)
-    extract_embeddings(rows, FakeImageEncoder(revision="r1"), cache=cache)
-    other = FakeImageEncoder(revision="r2")
+    first = fake_encoder_factory(revision="r1")
+    other = fake_encoder_factory(revision="r2")
+    cache = EmbeddingCache(tmp_path / "emb", first.dim)
+    extract_embeddings(rows, first, cache=cache)
     extract_embeddings(rows, other, cache=cache)
     assert other.images_encoded == len(rows)
 
 
-def test_corrupted_cache_entry_is_recomputed(dataset, tmp_path):
+def test_corrupted_cache_entry_is_recomputed(dataset, tmp_path, fake_encoder_factory):
     rows = dataset.rows("validation")[:1]
-    enc = FakeImageEncoder()
+    enc = fake_encoder_factory()
     cache = EmbeddingCache(tmp_path / "emb", enc.dim)
     extract_embeddings(rows, enc, cache=cache)
     (entry,) = list((tmp_path / "emb").rglob("*.npy"))
     np.save(entry, np.full(enc.dim, np.nan, dtype=np.float32))  # poison it
-    again = FakeImageEncoder()
+    again = fake_encoder_factory()
     out = extract_embeddings(rows, again, cache=cache)
     assert again.images_encoded == 1
     assert np.all(np.isfinite(out.matrix))
 
 
-def test_image_sha_mismatch_rejected(ml_fixture):
+def test_image_sha_mismatch_rejected(ml_fixture, fake_encoder):
     lines = ml_fixture["manifest"].read_text(encoding="utf-8").splitlines()
     row = json.loads(lines[0])
     row["image"]["sha256"] = "f" * 64
@@ -81,38 +81,34 @@ def test_image_sha_mismatch_rejected(ml_fixture):
     ds = load_dataset(ml_fixture["manifest"], ml_fixture["split"], ml_fixture["image_root"])
     bad = [s for s in ds.rows("train") + ds.rows("validation") if s.sample_id == row["sample_id"]]
     with pytest.raises(DataContractError, match="sha256"):
-        extract_embeddings(bad, FakeImageEncoder())
+        extract_embeddings(bad, fake_encoder)
 
 
-def test_undecodable_image_fails_with_sample_id(dataset):
+def test_undecodable_image_fails_with_sample_id(dataset, fake_encoder):
     sample = dataset.rows("train")[0]
     sample.image_path.write_bytes(b"not an image")
     from dataclasses import replace
 
     broken = replace(sample, image_sha256=None)
     with pytest.raises(DataContractError, match=sample.sample_id):
-        extract_embeddings([broken], FakeImageEncoder())
+        extract_embeddings([broken], fake_encoder)
 
 
-class _BadEncoder(FakeImageEncoder):
-    def __init__(self, mode):
-        super().__init__()
-        self.mode = mode
-
-    def encode(self, images):
-        out = super().encode(images)
-        if self.mode == "nan":
-            out[0, 0] = np.nan
-            return out
-        return out[:, :-1]  # wrong dimension
-
-
-def test_bad_encoder_output_rejected(dataset):
+def test_bad_encoder_output_rejected(dataset, fake_encoder, monkeypatch):
     rows = dataset.rows("validation")
+    encode = fake_encoder.encode
+
+    def nonfinite_output(images):
+        output = encode(images)
+        output[0, 0] = np.nan
+        return output
+
+    monkeypatch.setattr(fake_encoder, "encode", nonfinite_output)
     with pytest.raises(NonFiniteEmbeddingError):
-        extract_embeddings(rows, _BadEncoder("nan"))
+        extract_embeddings(rows, fake_encoder)
+    monkeypatch.setattr(fake_encoder, "encode", lambda images: encode(images)[:, :-1])
     with pytest.raises(DataContractError, match="shape"):
-        extract_embeddings(rows, _BadEncoder("dim"))
+        extract_embeddings(rows, fake_encoder)
 
 
 def test_embedding_set_check_detects_order_change(dataset, fake_encoder):

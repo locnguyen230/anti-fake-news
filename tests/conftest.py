@@ -48,5 +48,10 @@ def ml_config():
 
 
 @pytest.fixture
-def fake_encoder():
-    return FakeImageEncoder()
+def fake_encoder_factory():
+    return FakeImageEncoder
+
+
+@pytest.fixture
+def fake_encoder(fake_encoder_factory):
+    return fake_encoder_factory()
