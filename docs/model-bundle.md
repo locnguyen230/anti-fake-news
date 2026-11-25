@@ -25,9 +25,11 @@ cache/ml-fixture-bundles/
   text_only/  image_only/  multimodal/
 ```
 
-Chế độ xuất candidate thật mặc định dùng `backend/artifacts/candidates/`. Chỉ định thư mục mới bằng
-`--out` cho mỗi lần xuất tiếp theo. Bộ xuất chỉ đưa cả ba gói vào thư mục đích sau khi
-kiểm tra parity xong, và từ chối ghi đè thư mục đã tồn tại.
+Chế độ xuất candidate thật mặc định ghi vào `backend/artifacts/` (`text_only/`, `image_only/`,
+`multimodal/`, `label_map.json`, `export-report.json`; các file khác như `metadata.schema.json` được giữ).
+Bộ xuất chỉ đưa cả ba gói vào sau khi kiểm tra parity xong. Nếu thư mục đã có gói thì phải thêm
+`--replace`; khi thay bị lỗi, gói cũ được khôi phục. Gói fixture không bao giờ đè lên gói thật.
+Thêm `--expect-selected configs/selected-models.json` để bắt buộc C/ngưỡng khớp với lựa chọn của #34.
 
 Khi thử fixture cho demo, đặt `AFN_MODEL_ARTIFACT_PATH=cache/ml-fixture-bundles/multimodal`
 trong `.env`. Với candidate thật, trỏ cấu hình tới thư mục `multimodal` của lần xuất đã kiểm định.
