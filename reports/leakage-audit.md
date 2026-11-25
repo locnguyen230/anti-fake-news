@@ -182,6 +182,67 @@ Train/Validation làm bằng chứng nghiệm thu. Freeze #49 còn yêu cầu đ
 artifact, tham số và chữ ký ML/QA. [Thiết kế](../DESIGN.md) ·
 [AFN-049](https://github.com/ngnsusinn/anti-fake-news/issues/49)
 
+## Sàng lọc bổ sung và duyệt theo tài nguyên
+
+Ngày 25/11/2026. Quét bốn CSV ghim SHA-256, loại ID đã có trong danh sách
+218 mẫu rồi chuẩn hóa URL theo quy tắc AFN-017. Đối chiếu nhãn nguồn trên
+toàn bộ CSV và so hostname với Test khóa. Có 22.647 dòng URL hợp lệ chưa
+có trong danh sách 218, với quyết định sàng lọc dưới đây. Số đếm là số dòng
+metadata, không phải số bài đủ điều kiện.
+
+| Quyết định | Dòng |
+| --- | ---: |
+| Loại vì URL chuẩn hóa có cả hai nhãn nguồn | 308 |
+| Cách ly vì hostname trùng Test khóa | 2.821 |
+| Đã kiểm từng tài nguyên, cùng publisher với Test khóa | 1 |
+| Đã kiểm từng tài nguyên, thân bài vượt giới hạn | 2 |
+| Ưu tiên kiểm quyền từng bài và ảnh | 106 |
+| Chờ xác định loại bài và quyền ảnh riêng | 656 |
+| Chờ bằng chứng quyền từng tài nguyên | 18.753 |
+
+Gói FakeNewsNet cung cấp URL, ID và metadata. Quyền dùng bài và ảnh
+được đối chiếu theo từng tài nguyên. Nguồn cơ quan nhà nước được ưu
+tiên tra cứu vì có thể tìm được thông tin quyền rõ ràng. Chỉ nhìn
+hostname cơ quan chưa đủ để suy ra quyền của ảnh do bên thứ ba cung
+cấp. [FakeNewsNet](https://github.com/KaiDMML/FakeNewsNet#overview) ·
+[USAGov về nội dung cơ quan liên bang](https://www.usa.gov/government-copyright)
+
+### Quyết định đã đối chiếu trực tiếp
+
+- Ghép ba ID `politifact_real` chưa dùng với bài chính thức trong kho
+  lưu trữ Nhà Trắng. Xác nhận publisher, ngày/sự kiện và chính sách quyền.
+  Đối chiếu ảnh Pete Souza do Nhà Trắng công bố cùng sự kiện, sau đó
+  kiểm giải mã JPEG và SHA-256. Hai bản ghi toàn văn dài 55.996 và
+  58.310 ký tự vượt giới hạn 50.000. Bài Scranton dài 20.818 ký tự
+  qua kiểm text/ảnh. Publisher này đã xuất hiện trong Test khóa nên
+  cả ba nằm ngoài Train/Validation. Giữ nhãn nguồn và không đưa thêm
+  ID vào Test. [Chính sách quyền](https://obamawhitehouse.archives.gov/copyright) ·
+  [Bài Scranton](https://obamawhitehouse.archives.gov/the-press-office/2011/11/30/remarks-president-american-jobs-act-0) ·
+  [Ảnh chính thức](https://obamawhitehouse.archives.gov/photos-and-video/photo/2011/11/20111130-potus-scranton)
+- Rà bốn mẫu Train/Validation thuộc nguồn cơ quan trong bản nháp nối
+  hostname. Loại trang hỏi đáp của National Archives và bảng chuỗi
+  thống kê CES của BLS vì loại nội dung không đạt tiêu chí bài viết.
+  Hai mẫu còn lại có hồ sơ chờ quyền ảnh. [National Archives](https://www.archives.gov/presidential-libraries/about/frequently-asked-questions) ·
+  [BLS CES](https://www.bls.gov/ces/data/)
+
+Sau khi loại thêm hai mẫu sai loại, đã cân bằng lại phần Train/Validation
+ở hai kịch bản. Test giữ đúng tập 33 ID cũ. Các tập vẫn có hai lớp và giữ
+nguyên thành phần nhóm ở mỗi split.
+
+| Kịch bản | Train / Validation / Test khóa | Mẫu còn trong bản nháp | Thiếu để đạt 200 |
+| --- | --- | ---: | ---: |
+| Nối hostname | 117 / 26 / 33 | 176 | 24 |
+| Thêm các cạnh sự kiện ứng viên để thử độ nhạy | 102 / 24 / 33 | 159 | 41 |
+
+Các bảng sàng lọc và quyết định theo ID nằm trong thư mục
+`data/private/afn-029-provenance/supplemental-review/`. Hai CSV split đã
+rà nằm ở cùng vùng QA, có tên `qa-split-screened-*.csv`. SHA-256 của bản
+nối hostname là `6cb2a123ffaf7680108f1e300ffb10fb2708028b184d17028fb0ca073d3f46ce`.
+Chưa có mẫu bổ sung đủ điều kiện nhập split. Mốc thiếu 24 giả định tất cả
+176 mẫu trong bản nháp sẽ được xác nhận quyền và metadata. Quy mô dưới
+200 chỉ dùng cho hướng thăm dò theo điều kiện của nhóm. Không thay
+manifest, nhãn hoặc split đã dùng ở #34. [Phạm vi dữ liệu](../DEFINE.md)
+
 ## Điều kiện bỏ chặn
 
 DATA `locnguyen230` cần bàn giao metadata publisher/event theo ID hoặc bản
