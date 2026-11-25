@@ -141,10 +141,11 @@ try {
     await analysis.locator('#demo-token').fill(localToken);
     await analysis.locator('#analyze').click();
     await analysis.waitForFunction(() => !document.querySelector('#result').hidden);
-    assert.match(await analysis.locator('#result-detail').innerText(), /Giả lập.*dev-mock-not-a-model/u);
+    assert.match(await analysis.locator('#result-warning').innerText(), /Giả lập.*đối chiếu nguồn/u);
+    assert.match(await analysis.locator('#result-detail').innerText(), /dev-mock-not-a-model/u);
     const detail = await analysis.locator('#result-detail').innerText();
     assert.match(detail, /fake_score: 0\.42.*chưa hiệu chuẩn/u);
-    assert.match(detail, /phiên bản.*Thời gian xử lý.*Văn bản không bị cắt/u);
+    assert.match(detail, /phiên bản.*Thời gian xử lý.*toàn bộ văn bản/su);
     assert.equal(await analysis.locator('#retry').getAttribute('aria-describedby'), 'analysis-status');
     await analysis.locator('#text').fill(input + ' Changed.');
     assert.match(await analysis.locator('#result-stale').innerText(), /Kết quả cũ/u);
@@ -258,7 +259,7 @@ try {
     await analysis.locator('#analyze').click();
     if (realEndpoint) {
       await analysis.locator('#result').waitFor({ state: 'visible', timeout: 35_000 });
-      assert.match(await analysis.locator('#result-detail').innerText(), /Dự đoán của mô hình/u);
+      assert.match(await analysis.locator('#result-warning').innerText(), /Dự đoán của mô hình.*đối chiếu nguồn/u);
       assert.doesNotMatch(await analysis.locator('#result-detail').innerText(), /dev-mock-not-a-model/u);
       console.log('PASS extension reaches a ready real predictor');
     } else {

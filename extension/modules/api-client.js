@@ -20,7 +20,7 @@ function configForRequest(config) {
 }
 
 function isPrediction(data) {
-  return data && typeof data.request_id === 'string'
+  return data && Object.keys(data).length === 7 && typeof data.request_id === 'string'
     && ['fake', 'real'].includes(data.label)
     && Number.isFinite(data.fake_score) && data.fake_score >= 0 && data.fake_score <= 1
     && typeof data.model_id === 'string' && Boolean(data.model_id.trim())

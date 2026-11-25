@@ -23,6 +23,7 @@ class PackageExtensionTest(unittest.TestCase):
                 self.assertFalse((output / "modules" / "local-fixture.js").exists())
                 self.assertFalse((output / "local-fixture.json").exists())
                 self.assertTrue((output / "modules" / "result-view.js").is_file())
+                self.assertTrue((output / "styles" / "results.css").is_file())
                 local = output / "local-note.txt"
                 local.write_text("Local output", encoding="utf-8")
                 with self.assertRaises(FileExistsError):

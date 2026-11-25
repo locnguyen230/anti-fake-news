@@ -16,6 +16,7 @@ TOP_LEVEL = (
     "extract.js",
     "service-worker.js",
     "styles.css",
+    "styles/results.css",
 )
 MODULES = (
     "analysis-controller.js",

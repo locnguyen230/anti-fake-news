@@ -73,7 +73,7 @@ const analysis = bindAnalysis({
   configFields: { endpoint: get('endpoint'), demoToken: get('demo-token'), timeout: get('timeout') },
   client: createApiClient(),
   status: get('analysis-status'), result: get('result'), resultDetail: get('result-detail'),
-  resultStale: get('result-stale'), retry: get('retry'),
+  resultWarning: get('result-warning'), resultStale: get('result-stale'), retry: get('retry'),
 });
 get('check-health').addEventListener('click', analysis.checkHealth);
 get('draft').disabled = false;
