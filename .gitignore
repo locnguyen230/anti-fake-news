@@ -36,5 +36,6 @@ cache/
 *.h5
 *.hdf5
 
-# Generated, unpacked Chromium package.
+# Generated packages for local handoff.
 /release/extension/
+/release/backend.zip

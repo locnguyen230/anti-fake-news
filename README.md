@@ -91,6 +91,8 @@ See [Extension smoke setup](docs/extension-w1.md) for Playwright and Chromium.
 
 ## Contracts and scope
 
+- [Backend package and offline setup](docs/backend-setup.md)
+- [Data card](docs/data-card.md) and [data rebuild](docs/rebuild-data.md)
 - [API contract v0.2.0](docs/api-contract.md)
 - [Predictor/shared preprocessing](docs/inference-interface.md)
 - [Explicit mock usage and historical AFN-009 evidence](docs/dev-mock.md)
