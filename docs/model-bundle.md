@@ -1,9 +1,8 @@
 # Gói mô hình `afn-model-bundle-v1`: bàn giao cho Backend (#24, #37)
 
-Trạng thái: **định dạng đề xuất bởi ML (AFN-035)**, chờ Integration (#24) và Backend review.
-Hiện chỉ có **gói fixture** (huấn luyện trên dữ liệu tổng hợp, `is_fixture: true`) để Backend
-viết loader và predictor. Gói ứng viên thật được xuất bằng cùng lệnh sau #34. Gói fixture
-**không** được dùng làm bằng chứng nghiệm thu artifact thật hay kết quả mô hình.
+Loader AFN-024 dùng trực tiếp schema v1 của AFN-035. Gói fixture được huấn luyện trên
+dữ liệu tổng hợp và dùng cho kiểm thử dev/test. AFN-035 đã xuất các ứng viên
+Train/Validation từ dataset `ml-v2`. Xem [báo cáo xuất ứng viên](../reports/ml-candidates-v2.md).
 
 ## 1. Tạo gói trên máy bạn
 
@@ -31,8 +30,9 @@ Bộ xuất chỉ đưa cả ba gói vào sau khi kiểm tra parity xong. Nếu 
 `--replace`; khi thay bị lỗi, gói cũ được khôi phục. Gói fixture không bao giờ đè lên gói thật.
 Thêm `--expect-selected configs/selected-models.json` để bắt buộc C/ngưỡng khớp với lựa chọn của #34.
 
-Khi thử fixture cho demo, đặt `AFN_MODEL_ARTIFACT_PATH=cache/ml-fixture-bundles/multimodal`
-trong `.env`. Với candidate thật, trỏ cấu hình tới thư mục `multimodal` của lần xuất đã kiểm định.
+Khi thử fixture, đặt `AFN_ENVIRONMENT=test`, `AFN_PREDICTOR_MODE=real` và
+`AFN_MODEL_ARTIFACT_PATH=cache/ml-fixture-bundles/multimodal`. Với candidate thật,
+trỏ cấu hình tới thư mục `multimodal` của lần xuất đã kiểm định.
 
 ## 2. Nội dung một gói
 
@@ -61,39 +61,29 @@ Các trường chính của `metadata.json`:
 | `training` | Seed, số mẫu, hash manifest/split/config, hash thứ tự Train |
 | `test_predictions_included` | Luôn `false` |
 
-## 3. Code tích hợp (gợi ý cho #24/#37)
+## 3. Nạp và warm-up ở Backend
 
-`backend/app/model_bundle.py` là thư viện thuần: không chứa FastAPI và không quản lý vòng đời.
-Loader (#24) bọc nó vào lifecycle và adapter; predictor (#37) gọi `predict`.
+1. Cài `backend/requirements.txt` và `ml/requirements.txt` vào cùng môi trường Python.
+2. Chuẩn bị cache CLIP theo [AFN-006](ml-environment.md). Nếu dùng cache ngoài repo,
+   đặt `HF_HOME` tới thư mục cha của `hub`. Backend đọc cache ở chế độ offline.
+3. Cấu hình thư mục bundle multimodal tin cậy và token demo. Khởi chạy
+   `python -m app` từ `backend/`, kiểm tra `GET /health` rồi thử multipart mẫu trong
+   [hợp đồng API](api-contract.md).
 
-```python
-from app.model_bundle import BundleError, check_encoder_identity, load_bundle
-from app.preprocessing import load_image_rgb
+`app.model_loader.load_predictor` dùng reader và schema v1 để xác thực metadata,
+checksum, chiều/kiểu mảng, classes, ánh xạ nhãn và ngưỡng. Encoder dùng chung ở
+`backend/app/clip_encoder.py` đối chiếu checkpoint, hash processor và chiều/dtype với bundle.
+Warm-up chạy một lần bằng PNG tổng hợp trước khi công bố `ready`. TF-IDF dùng từ vựng
+và IDF đã xuất, classifier dùng các hệ số đã fit trên Train. Bundle chỉ lấy từ thư mục
+do người vận hành cấu hình, còn multipart chỉ nhận nội dung bài và ảnh.
 
-# Startup, một lần (#24). Bất kỳ lỗi nào cũng cho state=error và /predict trả 503.
-bundle = load_bundle(settings.model_artifact_path, expected_configuration="multimodal")
-encoder = ClipImageEncoder(offline=True)          # hiện nằm ở ml/extract_embeddings.py
-check_encoder_identity(bundle, encoder.identity, encoder.dim)
-# warm-up: bundle.predict("warm up", "warm up text", encoder.encode([load_image_rgb(png)]))
-
-# Mỗi request (#37), sau khi validation (#22/#23) đã cho bytes ảnh hợp lệ:
-emb = encoder.encode([load_image_rgb(inputs.image_bytes)])
-pred = bundle.predict(inputs.title, inputs.text, emb)
-# -> pred.label, pred.fake_score, pred.text_truncated, pred.model_id, pred.model_version
-```
-
-Ánh xạ lỗi:
-
-| Lỗi | HTTP |
+| Trạng thái hoặc lỗi | Phản hồi |
 | --- | --- |
-| `BundleError` khi startup (thiếu file, sai checksum, sai số chiều, sai `label_map`, lệch encoder, lệch `preprocess_version`) | 503 `model_not_ready` |
-| `PreprocessingError` (`EmptyTextError`, `InvalidImageError`) | 400 `invalid_input` |
-| `NonFiniteEmbeddingError`, `BundleError` lúc chấm điểm | 503 (lỗi mô hình) |
+| Bundle thiếu hoặc không tương thích, CLIP thiếu cache hoặc warm-up thất bại | Health báo `error`, request hợp lệ nhận 503 `model_not_ready` |
+| Nội dung rỗng sau chuẩn hóa hoặc ảnh không đọc được | 400 `invalid_input`, model giữ trạng thái hiện tại |
+| Embedding sai dtype/chiều hoặc lỗi chấm điểm | 503 `model_not_ready`, adapter chuyển sang `error` |
 
-Thông điệp của `BundleError` không chứa đường dẫn hay nội dung file.
-
-`ClipImageEncoder` hiện nằm trong `ml/`. Muốn backend import thì cần repo root trên `sys.path`
-(xem `scripts/smoke_bundle.py`), hoặc #24 chuyển lớp này vào `backend/app/`. Quyết định cách nào thuộc #24.
+HTTP trả mã lỗi chuẩn và UUID đã xác thực. Khởi động lại Backend để nạp lại bundle.
 
 ## 4. Đã kiểm tra
 
@@ -103,6 +93,8 @@ Thông điệp của `BundleError` không chứa đường dẫn hay nội dung 
   `text_truncated` đúng; gói bị sửa coef, nhét pickle, sai threshold/label_map/`preprocess_version`/thứ tự ghép,
   thiếu file, lệch encoder đều bị từ chối; thông điệp lỗi không lộ đường dẫn; export từ chối dữ liệu có Test.
   Kiểm thử hồi quy xác nhận metadata thiếu hoặc sai kiểu báo `BundleError` và lần xuất lỗi giữ nguyên bundle đã dùng.
+- `tests/test_model_loader.py` chạy startup, hai request, shutdown và các ca lỗi trên
+  bundle sinh bởi exporter. [Hướng dẫn fixture và smoke CLIP](../tests/fixtures/loader/README.md).
 - `scripts/smoke_bundle.py` (macOS M1, CPU, CLIP thật, input tổng hợp, sau khi nạp model):
 
 | Gói | Nạp gói + CLIP | 1 request (trung vị / max, 20 lượt) |
@@ -114,7 +106,6 @@ Thông điệp của `BundleError` không chứa đường dẫn hay nội dung 
 
 | Việc | Owner |
 | --- | --- |
-| Duyệt schema đề xuất bằng fixture và chốt hợp đồng cho loader | Integration (#24) |
-| Chốt nơi đặt `ClipImageEncoder` cho backend | Integration (#24) |
-| Xuất gói ứng viên thật từ split đã audit | ML (#35, sau #34) |
-| Parity offline–online qua predictor thật | ML (#36) + Backend (#37) |
+| Review lifecycle Backend và schema đã dùng | Backend (#24) |
+| Audit độc lập split `ml-v2` trước khi khóa ứng viên | DATA/QA (#29, #49) |
+| Parity và tích hợp ứng viên qua Predictor của dịch vụ | ML/Backend (#37–39) |

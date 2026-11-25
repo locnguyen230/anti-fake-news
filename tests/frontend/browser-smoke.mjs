@@ -55,6 +55,8 @@ try {
   const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
   const extensionId = new URL(worker.url()).hostname;
   const browserSession = await context.browser().newBrowserCDPSession();
+  const { product } = await browserSession.send('Browser.getVersion');
+  console.log('Browser unpacked smoke: ' + product);
 
   async function openAnalysis(source) {
     await source.bringToFront();
@@ -78,6 +80,8 @@ try {
   const article = await context.newPage();
   await article.goto(origin + '/article.html');
   const analysis = await openAnalysis(article);
+  const sessionKey = 'analysis:' + sessionId(analysis);
+  const storedSession = await worker.evaluate(async key => (await chrome.storage.session.get(key))[key], sessionKey);
   assert.match(await analysis.locator('#title').inputValue(), /Vườn cộng đồng/u);
   const input = await analysis.locator('#text').inputValue();
   assert.match(input, /hạt giống/u);
@@ -143,7 +147,15 @@ try {
     assert.match(detail, /phiên bản.*Thời gian xử lý.*Văn bản không bị cắt/u);
     assert.equal(await analysis.locator('#retry').getAttribute('aria-describedby'), 'analysis-status');
     await analysis.locator('#text').fill(input + ' Changed.');
-    assert.equal(await analysis.locator('#result').isHidden(), true);
+    assert.match(await analysis.locator('#result-stale').innerText(), /Kết quả cũ/u);
+    assert.equal(await analysis.locator('#result-stale').isVisible(), true);
+    assert.equal(await analysis.locator('#result-detail').innerText(), detail);
+    assert.equal(await analysis.locator('#image-preview').isVisible(), true);
+    assert.deepEqual(
+      await worker.evaluate(async key => (await chrome.storage.session.get(key))[key], sessionKey),
+      storedSession,
+    );
+    console.log('PASS stale result retains the draft and session storage excludes the chosen file');
     await analysis.locator('#text').fill(input);
     console.log('PASS browser multipart upload reaches FastAPI mock and labels the result');
     const predictUrl = process.env.AFN_MOCK_TEST_URL + '/predict';
@@ -159,6 +171,7 @@ try {
     assert.equal(await analysis.locator('#result').isHidden(), true);
     await analysis.locator('#retry').click();
     await analysis.locator('#result').waitFor({ state: 'visible' });
+    assert.equal(await analysis.locator('#result-stale').isHidden(), true);
     console.log('PASS 503 preserves the draft and manual retry reaches the mock');
     await analysis.locator('#demo-token').fill('');
     const unauthorized = analysis.waitForResponse(response =>
@@ -279,11 +292,10 @@ try {
   await manual.locator('#text').fill('Nội dung khi không có quyền đọc tab.');
   assert.equal(await manual.locator('#text').inputValue(), 'Nội dung khi không có quyền đọc tab.');
 
-  const key = 'analysis:' + sessionId(analysis);
   await analysis.close();
   let stored = true;
   for (let attempt = 0; stored && attempt < 20; attempt++) {
-    stored = await worker.evaluate(async id => Boolean((await chrome.storage.session.get(id))[id]), key);
+    stored = await worker.evaluate(async id => Boolean((await chrome.storage.session.get(id))[id]), sessionKey);
     if (stored) await delay(50);
   }
   assert.equal(stored, false);
