@@ -99,7 +99,7 @@ def test_real_factory_never_loads_mock_or_infers_readiness(tmp_path, monkeypatch
         path.write_text("not-a-model", encoding="utf-8")
     adapter = create_adapter(Settings(_env_file=None, model_artifact_path=path))
     assert adapter.mode == "real"
-    assert adapter.state == ModelState.NOT_LOADED
+    assert adapter.state == ModelState.ERROR
 
 
 def test_mock_factory_failure_stays_error(monkeypatch):

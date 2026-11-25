@@ -1,4 +1,4 @@
-"""Provider state and failure boundary. No model loader or mock fallback."""
+"""Provider state and failure boundary for real and explicit mock inference."""
 
 from collections.abc import Callable
 from enum import Enum
@@ -7,6 +7,7 @@ from typing import Literal
 from fastapi import Request
 
 from app.config import Settings
+from app.errors import InputError
 from app.predictor import ModelNotReadyError, Predictor, PredictorInput
 from app.schemas import PredictionResult
 
@@ -38,8 +39,8 @@ class InferenceAdapter:
     def initialize(self, factory: Callable[[], Predictor]) -> None:
         """The lifecycle owner must supply a compatible, ready-to-use provider.
 
-        This is not a model loader. Real integration must validate/warm up before
-        returning its provider. Initialization failures are retained as ERROR.
+        Real initialization validates and warms up before returning its provider.
+        Initialization failures are retained as ERROR.
         """
         self.close()
         try:
@@ -57,7 +58,6 @@ class InferenceAdapter:
         self._state = ModelState.ERROR
 
     def close(self) -> None:
-        # No provider resources are owned by this foundation; real cleanup is #37.
         self._predictor = None
         self._state = ModelState.NOT_LOADED
 
@@ -67,6 +67,8 @@ class InferenceAdapter:
             raise ModelNotReadyError
         try:
             return PredictionResult.model_validate(predictor.predict(inputs))
+        except InputError:
+            raise
         except Exception:
             self.mark_error()
             raise ModelNotReadyError from None
@@ -81,7 +83,13 @@ def create_adapter(settings: Settings) -> InferenceAdapter:
         from app.dev.mock_predictor import MockPredictor
 
         adapter.initialize(MockPredictor)
-    # Real mode intentionally stays NOT_LOADED; no artifacts are inspected.
+    elif "model_artifact_path" in settings.model_fields_set or settings.model_artifact_path.exists():
+        def initialize_real() -> Predictor:
+            from app.model_loader import load_predictor
+
+            return load_predictor(settings)
+
+        adapter.initialize(initialize_real)
     return adapter
 
 

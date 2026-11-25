@@ -31,7 +31,7 @@ preprocessing.load_image_rgb: EXIF orientation, RGB 8-bit, alpha nền trắng,
 palette/grayscale/16-bit theo helper. Context manager đóng RGB khi thoát.
 validate_image_bytes dùng context này và đóng kết quả ngay, giữ bytes gốc qua seam.
 Không có quy tắc EXIF/RGB thứ hai, không resize/normalize CLIP, không recompress JPEG.
-Provider thật #37 sẽ dùng cùng helper để tạo RGB; decode lại là chi phí giữ seam hiện hữu.
+Provider multimodal dùng cùng helper để giải mã bytes gốc thành RGB trước CLIP.
 Đổi seam sang RGB cần review/version mới.
 
 Các hàm text/embedding đi kèm module upstream giữ nguyên nhưng transport không gọi.
@@ -46,15 +46,14 @@ không trắng, text_truncated boolean; không có trường thừa. Backend th�
 monotonic quanh lời gọi synchronous Predictor trong thread pool. Không tự tạo model metadata
 hay đổi ngưỡng. Điểm số không mặc nhiên là xác suất calibrated.
 
-Adapter quản lý not_loaded/ready/error; get_predictor là DI seam. initialize(factory)
-là điểm nối Python; factory thật cần kiểm tra artifact/warm-up trước ready.
-Không nạp mô hình khi import hoặc khi thấy artifact path tồn tại. Lỗi provider/đầu ra sai schema
-thành 503 đã làm sạch và adapter error; không fallback mock. Shutdown đóng provider/xóa tham chiếu.
-Recovery cần initialize/restart tường minh.
+Adapter quản lý `not_loaded`, `ready` và `error`. FastAPI lifespan gọi factory thật
+một lần trong thread pool. Factory kiểm bundle, đối chiếu CLIP và warm-up trước khi đưa
+predictor vào adapter. Lỗi mô hình hoặc đầu ra sai schema trả 503 đã làm sạch và
+đưa adapter về `error`. Lỗi tiền xử lý đầu vào trả 400 và giữ trạng thái `ready`.
+Khi shutdown, adapter bỏ tham chiếu đến provider. Khởi động lại để nạp lại bundle.
 
-Real HTTP vẫn bị chặn 503 sau validation, kể cả dependency override; loader thuộc #37.
-Mock chỉ khi đồng thời environment dev/test và predictor_mode mock; vẫn cần token/ảnh hợp lệ.
-Mock không dùng nội dung để suy luận. Health ready trong mock chỉ có nghĩa mock sẵn sàng.
+`get_predictor` là điểm tiêm phụ thuộc. HTTP vẫn kiểm readiness của adapter sau validation.
+Mock yêu cầu đồng thời environment dev/test và predictor_mode mock, cùng token/ảnh hợp lệ.
 
 ## Review cần thiết
 

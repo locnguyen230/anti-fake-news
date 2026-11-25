@@ -15,7 +15,9 @@ Không yêu cầu token. HTTP 200 chỉ chứng minh dịch vụ phản hồi:
 
 Health/predict/lỗi có các header `X-AFN-Inference-Mode: real|mock`,
 `X-AFN-Model-State: not_loaded|ready|error`, `Cache-Control: no-store`.
-Real chưa có loader, mặc định not_loaded/false. Mock ready chỉ là mock sẵn sàng.
+Real báo `not_loaded` khi chưa có cấu hình bundle và đường dẫn mặc định không tồn tại,
+`ready` sau khi nạp và warm-up thành công, hoặc `error` khi startup/provider lỗi.
+Mock báo `ready` khi predictor giả lập sẵn sàng.
 Không trả token, đường dẫn artifact hay thông điệp ngoại lệ nội bộ.
 
 ## POST /predict
@@ -66,7 +68,7 @@ Chỉ bắt lỗi đầu vào dự kiến, không chuyển lỗi lập trình th
 
 | HTTP | error_code | Nguyên nhân |
 | --- | --- | --- |
-| 400 | invalid_input | UUID/text/title/multipart/file/MIME/decode/pixel không hợp lệ |
+| 400 | invalid_input | UUID/text/title/multipart/file/MIME/decode/pixel không hợp lệ, hoặc nội dung rỗng sau tiền xử lý của model |
 | 401 | invalid_token | Token thiếu/sai/trùng hoặc server chưa cấu hình |
 | 413 | request_too_large | Vượt trần byte file hoặc toàn body |
 | 503 | model_not_ready | Đầu vào hợp lệ nhưng model chưa sẵn sàng/provider lỗi |
@@ -82,13 +84,14 @@ Client giữ ID gốc để đối chiếu lỗi sớm và bỏ phản hồi c�
 
 ## Kết quả
 
-HTTP 200 hiện chỉ có trong mock opt-in dev/test. `PredictResponse` chứa:
+HTTP 200 yêu cầu predictor đã sẵn sàng. `PredictResponse` có các trường sau.
 UUID request_id; label fake/real; fake_score float hữu hạn [0,1]; model_version/model_id
 là chuỗi không trắng; processing_time_ms số nguyên >=0; text_truncated boolean; không trường thừa.
 Điểm số không mặc nhiên là xác suất calibrated; Backend không tự chọn ngưỡng nhãn/metadata.
 Thời gian monotonic quanh lời gọi Predictor, loại trừ upload và validation ảnh tại transport.
-Mock giữ model_id `dev-mock-not-a-model`, model_version `mock-v0.1.1`; dữ liệu cố định không
-phải dự đoán thật/accuracy. Real vẫn trả 503 với đầu vào hợp lệ; loader/warm-up thuộc #37/#38.
+Mock giữ model_id `dev-mock-not-a-model` và model_version `mock-v0.1.1`.
+Real dùng metadata của bundle đã nạp. Bundle fixture chỉ chạy trong dev/test, với hậu tố
+`-fixture` ở cả model_id và model_version. Xem [vòng đời bundle](model-bundle.md).
 
 ## Ví dụ client
 

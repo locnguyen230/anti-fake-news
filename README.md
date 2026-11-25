@@ -1,13 +1,12 @@
 # Anti-fake-news
 
-Local FastAPI foundation and dev mock for **AFN-007 / AFN-008 / AFN-009**.
+Local FastAPI service with a multimodal model loader and an explicit dev/test mock.
 Python **3.13** is the verified shared setup for Backend and ML on Windows x64.
 See [ML environment](docs/ml-environment.md) for shared dependencies and CLIP checks.
 
-By default, `GET /health` reports `model_ready: false` and `POST /predict`
-returns HTTP 503 without reading uploads. An explicit dev/test mock can return
-synthetic responses for UI development; see [dev-mock.md](docs/dev-mock.md).
-The real-mode scaffold returns 503 until the trained predictor is integrated.
+Without a ready bundle, `GET /health` reports `model_ready: false` and `POST /predict`
+returns HTTP 503 for valid requests. For synthetic responses during UI development,
+enable the [dev/test mock](docs/dev-mock.md).
 
 ## Setup and run
 
@@ -60,7 +59,7 @@ Explicit CLI bind options override settings. Keep this local service on loopback
 | AFN_PREDICTOR_MODE | real; mock requires dev/test |
 | AFN_DEMO_TOKEN | Unset; every prediction gets 401 until configured, including mock |
 | AFN_EXTENSION_ORIGIN | Unset; enforcement remains #38 |
-| AFN_MODEL_ARTIFACT_PATH | artifacts/model relative to repo; no loader yet |
+| AFN_MODEL_ARTIFACT_PATH | Multimodal bundle directory, relative to repo or absolute. Defaults to artifacts/model |
 | AFN_MAX_REQUEST_BYTES | Enforced 12 MiB total body default; configurable above 10 MiB |
 
 POST /predict requires X-Demo-Token, UUID, nonblank text (<=50,000 code points), optional
@@ -73,20 +72,22 @@ Image validation uses the unchanged shared ML preprocessing helper from PR #68 f
 Pillow/NumPy are pinned to that ML manifest. Predictor retains original encoded bytes.
 Do not log settings, credentials, articles/images, model exceptions or local artifact paths.
 
+For real mode, install `backend/requirements.txt` and `ml/requirements.txt` into the same
+environment, cache the pinned CLIP checkpoint and set `AFN_MODEL_ARTIFACT_PATH` to the
+trusted local bundle directory. Startup validates the bundle, loads CLIP offline and warms up
+the Predictor. See [bundle setup and lifecycle](docs/model-bundle.md).
+
 ## Verification
 
-From backend, using the same environment:
+From the repository root, using the configured Python environment:
 
-```powershell
-..\.venv\issue9\Scripts\python.exe -m pytest -q
-..\.venv\issue9\Scripts\python.exe -m pip check
-..\.venv\issue9\Scripts\python.exe tests/smoke_local.py
-..\.venv\issue9\Scripts\python.exe tests/smoke_local.py --mode mock
+```sh
+python -m pytest -q tests/test_model_loader.py backend/tests/test_inference_adapter.py
+python scripts/test_extension_smoke.py
 ```
 
-Run smoke commands sequentially; each reserves port 8000, creates an ephemeral token and
-synthetic PNG, and stops its own server. They do not test trained-model accuracy.
-Requirements pin runtime, image helper and test dependencies; no configured lint/type checker.
+The browser smoke uses temporary loopback servers, an ephemeral token and synthetic inputs.
+See [Extension smoke setup](docs/extension-w1.md) for Playwright and Chromium.
 
 ## Contracts and scope
 
@@ -97,6 +98,5 @@ Requirements pin runtime, image helper and test dependencies; no configured lint
 - [Historical AFN-007/008 evidence](docs/implementation-issues-7-8.md)
 - Project context: [DEFINE.md](DEFINE.md), [DESIGN.md](DESIGN.md)
 
-#37 model loading, #38 CORS/warm-up and #39 integration remain deferred; #28 QA-owned work
-is untouched. Real ML inference and browser cross-origin integration are not implemented here.
-Code verification does not replace ML/Extension review or authorize closing GitHub issues.
+Candidate parity through the deployed Predictor and end-to-end QA remain in
+#37–39. See the [week 2 checkpoint](reports/week-2-gate.md) for review status.

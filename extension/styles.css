@@ -20,6 +20,7 @@ section {
   background: white;
 }
 .notice { padding: .65rem .8rem; border-radius: 6px; background: #e9f4ee; color: #21453d; }
+#result-stale { margin-bottom: .65rem; background: #fff3d9; color: #61410b; }
 fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 label { display: block; margin: .8rem 0 .3rem; font-weight: 650; }
 input, textarea {

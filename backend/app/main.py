@@ -1,4 +1,4 @@
-"""Local service: real inference disabled; explicit dev/test mock via AFN-009."""
+"""Local inference service with startup readiness and an explicit dev/test mock."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -42,7 +42,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Resolve config at startup; importing this module never loads artifacts.
         app.state.settings = settings if settings is not None else Settings()
-        adapter = create_adapter(app.state.settings)
+        adapter = await run_in_threadpool(create_adapter, app.state.settings)
         app.state.inference_adapter = adapter
         app.state.predictor = adapter if adapter.ready else None
         try:
@@ -78,7 +78,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response_model=PredictResponse,
         responses={code: {"model": ErrorResponse} for code in (400, 401, 413, 503)},
         openapi_extra=predict_request_schema(),
-        summary="Synthetic prediction only in explicit dev/test mock mode",
+        summary="Analyze an article with the startup-configured provider",
         description=(
             "All modes require X-Demo-Token and validated multipart JPEG/PNG input. "
             "Real mode without a model returns 503 after validation. Check X-AFN-Inference-Mode "
@@ -87,25 +87,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ),
     )
     async def predict(
-        request: Request, response: Response,
+        response: Response,
         inputs: Annotated[PredictorInput, Depends(validate_request)],
         predictor: Annotated[Predictor, Depends(get_predictor)],
         adapter: Annotated[InferenceAdapter, Depends(get_inference_adapter)],
     ) -> PredictResponse:
-        config = request.app.state.settings
-        if (config.predictor_mode != "mock" or config.environment not in ("dev", "test")
-                or adapter.mode != "mock" or not adapter.ready):
-            # An override cannot enable real HTTP inference before #37.
+        if not adapter.ready:
             raise ModelNotReadyError
         start = perf_counter()
         try:
             result = PredictionResult.model_validate(
                 await run_in_threadpool(predictor.predict, inputs)
             )
+        except InputError:
+            raise
         except Exception:
             # Also covers explicitly overridden providers; never retain error text.
             adapter.mark_error()
             raise ModelNotReadyError from None
+        if not adapter.ready:
+            raise ModelNotReadyError
         elapsed_ms = max(0, int((perf_counter() - start) * 1000))
         response.headers.update(inference_headers(adapter))
         return PredictResponse(**result.model_dump(), request_id=inputs.request_id,
