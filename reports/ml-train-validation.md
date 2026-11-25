@@ -1,4 +1,4 @@
-# AFN-034/035/036: Train/Validation trên dữ liệu thật (dataset ml-v2)
+# AFN-034: Train/Validation trên dữ liệu thật (dataset ml-v2)
 
 Ngày chạy: 25/11/2026, macOS M1, CPU, CLIP ViT-B/32 đã ghim. `evidence_kind: VALIDATION_ONLY`.
 **Test chưa được nạp** (33 dòng bị khóa tới khi #49 ký freeze). Protocol `configs/experiment.yaml` vẫn ở trạng thái `proposed`.
@@ -63,30 +63,13 @@ cáo đúng như số đo, không ép Multimodal phải thắng. Đây chưa ph�
 
 Run: `cache/runs/20261125T144056Z/results.json`.
 
-## 3. #35: ba gói ứng viên
-
-`ml.export_artifacts` → `backend/artifacts/candidates-v2/` (gitignored), `is_fixture: false`, `status: candidate`.
-
-| Gói | model_version | Round-trip max\|Δ\| |
-| --- | --- | --- |
-| text-only | `text-only-20261125-275718e3163b` | 0 |
-| image-only | `image-only-20261125-cd863cbaabf5` | 5e-16 |
-| multimodal | `multimodal-20261125-105d5f14e79a` | 0 |
-
-C và ngưỡng trong gói khớp với lần chạy #34.
-
-## 4. #36: offline ↔ online
-
-`ml.inference_parity` trên Validation, dùng `ReferenceBundlePredictor` vì predictor thật của #37 chưa có:
-cả ba cấu hình **PASS** (n = 32, max|Δ| = 0; label, `text_truncated` và model identity đều khớp).
-Khi Backend #37 có predictor thật, chạy lại với `--predictor module:factory` và đo trên máy demo.
-
-## 5. Còn mở
+## 3. Còn mở
 
 - DATA/QA cần xác nhận các luật lọc và bản chia lại `ml-v2` (thay cho `data/split/*.json`), và đưa
   Test cùng payload gốc ra khỏi repo công khai.
 - `rights` của các mẫu đang ghi `unverified`: bản xuất chưa có bằng chứng quyền theo publisher.
 - PolitiFact-real chỉ còn 16 mẫu Train và 3 mẫu Val, nên số liệu theo nguồn rất không ổn định.
+- Xuất gói ứng viên (#35) và kiểm tra parity (#36) nằm ở các PR riêng, xếp chồng lên PR này.
 - #49 (freeze) và #50 (Test) chưa chạy. Thứ tự cần giữ: protocol được khóa, #49 ký, rồi #50 mới chấm Test một lần.
 
 ## Lệnh tái lập
@@ -96,10 +79,6 @@ Khi Backend #37 có predictor thật, chạy lại với `--predictor module:fac
     --groups data/processed/groups.json --image-root data --out data/private/ml-v2
 H=data/private/ml-v2/train-validation
 .venv/bin/python -m ml.run_experiments --manifest $H/manifest.jsonl --split $H/split.csv --image-root data --offline
-.venv/bin/python -m ml.export_artifacts --manifest $H/manifest.jsonl --split $H/split.csv --image-root data \
-    --out backend/artifacts/candidates-v2 --offline
-.venv/bin/python -m ml.inference_parity --bundle-root backend/artifacts/candidates-v2 --manifest $H/manifest.jsonl \
-    --split $H/split.csv --image-root data --offline --out cache/parity/real-v2.json
 ```
 
 `ml.prepare_dataset` import script của DATA nên cần `jsonschema` (chưa có trong requirements).
