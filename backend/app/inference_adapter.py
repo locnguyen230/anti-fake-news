@@ -74,24 +74,20 @@ class InferenceAdapter:
             self._dispose(provider)
 
     def close(self) -> None:
-        with self._lock:
-            provider, self._predictor = self._predictor, None
-            self._state = ModelState.NOT_LOADED
-            self._dispose(provider)
+        self._predictor = None
+        self._state = ModelState.NOT_LOADED
 
     def predict(self, inputs: PredictorInput) -> PredictionResult:
-        # One CPU model call at a time; close/error cannot race an active call.
-        with self._lock:
-            predictor = self._predictor
-            if not self.ready or predictor is None:
-                raise ModelNotReadyError
-            try:
-                return PredictionResult.model_validate(predictor.predict(inputs))
-            except InputError:
-                raise
-            except Exception:
-                self.mark_error()
-                raise ModelNotReadyError from None
+        predictor = self._predictor
+        if not self.ready or predictor is None:
+            raise ModelNotReadyError
+        try:
+            return PredictionResult.model_validate(predictor.predict(inputs))
+        except InputError:
+            raise
+        except Exception:
+            self.mark_error()
+            raise ModelNotReadyError from None
 
 
 def create_adapter(settings: Settings) -> InferenceAdapter:

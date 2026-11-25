@@ -3,10 +3,10 @@ import { ApiError } from './api-client.js';
 import { bindErrorRecovery } from './error-recovery.js';
 import { createRequestLifecycle } from './request-lifecycle.js';
 
-export function bindAnalysis({ form, configFields, client, status, result, resultDetail, retry }) {
+export function bindAnalysis({ form, configFields, client, status, result, resultDetail, resultWarning, resultStale, retry }) {
   const lifecycle = createRequestLifecycle();
   const recovery = bindErrorRecovery(status, retry);
-  const resultView = createResultView(result, resultDetail);
+  const resultView = createResultView(result, resultDetail, resultWarning, resultStale);
   const getConfig = () => ({
     endpoint: configFields.endpoint.value,
     demoToken: configFields.demoToken.value,
@@ -26,8 +26,9 @@ export function bindAnalysis({ form, configFields, client, status, result, resul
 
   function invalidateEdit() {
     lifecycle.invalidate();
-    if (recovery.hasRetry) resultView.clear();
-    else clearDisplay();
+    if (recovery.hasRetry) return;
+    status.textContent = '';
+    resultView.markStale();
   }
 
   form.addEventListener('afn:draft-change', invalidateEdit);

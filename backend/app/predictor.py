@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
-from pathlib import Path
 
 from fastapi import Request
 from pydantic import Field
@@ -39,8 +38,6 @@ class BundlePredictor:
         self._encoder = encoder
 
     def predict(self, inputs: PredictorInput) -> PredictionResult:
-        if self._encoder is None or self._bundle is None:
-            raise ModelNotReadyError
         try:
             with load_image_rgb(inputs.image_bytes) as image:
                 embedding = self._encoder.encode([image])
@@ -50,22 +47,6 @@ class BundlePredictor:
         except PreprocessingError:
             raise InputError(inputs.request_id) from None
         return PredictionResult.model_validate(result, from_attributes=True)
-
-    def close(self) -> None:
-        encoder, self._encoder = self._encoder, None
-        self._bundle = None
-        close = getattr(encoder, "close", None)
-        if callable(close):
-            close()
-
-
-def load_for_parity(bundle_dir: Path) -> BundlePredictor:
-    """AFN-036 factory hook; same loader/warm-up as HTTP, no .env or training."""
-    from app.config import Settings
-    from app.model_loader import load_predictor
-
-    return load_predictor(Settings(_env_file=None, environment="test", predictor_mode="real",
-                                   model_artifact_path=bundle_dir))
 
 
 def get_predictor(request: Request) -> Predictor:

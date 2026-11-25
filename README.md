@@ -58,7 +58,7 @@ Explicit CLI bind options override settings. Keep this local service on loopback
 | AFN_ENVIRONMENT | demo; alternatives dev/test |
 | AFN_PREDICTOR_MODE | real; mock requires dev/test |
 | AFN_DEMO_TOKEN | Unset; every prediction gets 401 until configured, including mock |
-| AFN_EXTENSION_ORIGIN | Unset; exact `chrome-extension://<32-char>` origin for CORS (see [local config](docs/local-config.md)) |
+| AFN_EXTENSION_ORIGIN | Unset; enforcement remains #38 |
 | AFN_MODEL_ARTIFACT_PATH | Multimodal bundle directory, relative to repo or absolute. Defaults to artifacts/model |
 | AFN_MAX_REQUEST_BYTES | Enforced 12 MiB total body default; configurable above 10 MiB |
 
@@ -91,6 +91,8 @@ See [Extension smoke setup](docs/extension-w1.md) for Playwright and Chromium.
 
 ## Contracts and scope
 
+- [Backend package and offline setup](docs/backend-setup.md)
+- [Data card](docs/data-card.md) and [data rebuild](docs/rebuild-data.md)
 - [API contract v0.2.0](docs/api-contract.md)
 - [Predictor/shared preprocessing](docs/inference-interface.md)
 - [Explicit mock usage and historical AFN-009 evidence](docs/dev-mock.md)

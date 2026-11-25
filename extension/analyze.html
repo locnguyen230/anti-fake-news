@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Phân tích bài viết</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles/results.css">
   <script type="module" src="analyze.js"></script>
 </head>
 <body>
@@ -34,7 +35,7 @@
           <ul id="candidates"></ul>
         </div>
         <label for="image-upload">Tải tệp JPEG hoặc PNG</label>
-        <input id="image-upload" type="file" accept="image/jpeg,image/png" aria-describedby="image-status form-status">
+        <input id="image-upload" type="file" accept="image/jpeg,image/png" aria-describedby="image-status form-status" disabled>
         <p id="image-status" role="status"></p>
         <img id="image-preview" alt="Ảnh đã chọn để phân tích" hidden>
         <button id="remove-image" type="button" hidden>Bỏ ảnh</button>
@@ -55,7 +56,7 @@
         <p id="form-status" role="status"></p>
         <p id="analysis-status" role="status"></p>
         <div class="analysis-actions">
-          <button id="analyze" type="submit">Phân tích</button>
+          <button id="analyze" type="submit" disabled>Phân tích</button>
           <button id="retry" type="button" aria-describedby="analysis-status" hidden>Thử lại</button>
         </div>
       </section>
@@ -63,6 +64,8 @@
 
     <section id="result" aria-labelledby="result-heading" hidden>
       <h2 id="result-heading">Kết quả phân tích</h2>
+      <p id="result-stale" class="notice" role="status" hidden>Kết quả cũ. Dữ liệu hoặc cấu hình đã thay đổi. Hãy phân tích lại.</p>
+      <p id="result-warning" class="notice"></p>
       <p id="result-detail"></p>
     </section>
   </main>

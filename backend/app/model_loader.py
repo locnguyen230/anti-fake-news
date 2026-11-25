@@ -29,22 +29,11 @@ def load_predictor(settings: Settings) -> BundlePredictor:
         raise BundleError("a fixture bundle requires dev or test")
 
     encoder = ClipImageEncoder(offline=True)
-    predictor = None
-    try:
-        check_encoder_identity(bundle, encoder.identity, encoder.dim)
-        predictor = BundlePredictor(bundle, encoder)
-        with Image.new("RGB", (32, 32), (80, 120, 180)) as image, BytesIO() as stream:
-            image.save(stream, format="PNG")
-            predictor.predict(
-                PredictorInput(request_id=UUID(int=0), text="Synthetic startup check", image_bytes=stream.getvalue())
-            )
-        return predictor
-    except BaseException:
-        # Nothing partially initialized escapes to the adapter.
-        close = getattr(predictor if predictor is not None else encoder, "close", None)
-        if callable(close):
-            try:
-                close()
-            except Exception:
-                pass
-        raise
+    check_encoder_identity(bundle, encoder.identity, encoder.dim)
+    predictor = BundlePredictor(bundle, encoder)
+    with Image.new("RGB", (32, 32), (80, 120, 180)) as image, BytesIO() as stream:
+        image.save(stream, format="PNG")
+        predictor.predict(
+            PredictorInput(request_id=UUID(int=0), text="Synthetic startup check", image_bytes=stream.getvalue())
+        )
+    return predictor
