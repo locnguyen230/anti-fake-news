@@ -301,6 +301,57 @@ phép đánh giá thăm dò khi có tập đã được duyệt với hai lớp 
 lập. 33 ID Test được giữ nguyên và payload vẫn khóa theo #49. Chưa chấp
 thuận mẫu nào cho huấn luyện hoặc phát hành dựa trên lượt duyệt này.
 
+## Tập con thăm dò sau khi bỏ bước kiểm quyền
+
+Ngày 26/11/2026. Lượt này đánh giá chất lượng kỹ thuật và khớp nguồn theo
+chỉ đạo bỏ bước xác minh quyền. Giữ nguyên nhãn nguồn FakeNewsNet. Dùng
+134 dòng Train/Validation từng chờ xác minh. Kết quả này không thay đổi
+trạng thái quyền đã lưu của bất kỳ bài hoặc ảnh nào.
+
+| Phép kiểm đối chiếu | Mẫu |
+| --- | ---: |
+| Tiêu đề bản thu hồi khớp tiêu đề trong metadata nguồn | 113 |
+| Khớp trang nguồn và ảnh cùng pixel RGB | 38 |
+| Khớp bài nhưng ảnh chưa xác minh | 13 |
+| Cần rà lại thân bài hoặc tiêu đề live | 8 |
+| Không tải được trang để kiểm | 4 |
+| Cần rà nguồn thủ công, chưa đủ điều kiện kiểm live | 71 |
+
+Với 38 cặp đạt, URL cùng hostname, tiêu đề live khớp, ít nhất 85% bộ
+6 từ liên tiếp trong thân bài thu hồi xuất hiện trên trang, và ảnh đại
+diện live có cùng kích thước cùng SHA-256 pixel RGB sau xử lý hướng EXIF.
+Các bước tự động đọc trang và ảnh của Train/Validation với giới hạn tải
+và kiểm điều kiện robots. Không mở tài nguyên Test.
+
+Rà lại 38 cặp và giữ 32. Ba bản ghi là hồ sơ tham khảo hoặc mục danh mục
+sách. Hai bài cần thêm bằng chứng nhãn áp dụng cho chính bài đó. Một bài
+có nhãn nguồn xung đột với tin của đơn vị phát sóng về sự kiện được mô
+tả. Không tự đổi nhãn. Rà riêng năm ca có fact-check xác định đúng bài
+gốc; một ca nằm trong tập 32 mẫu. Nhãn các mẫu còn lại vẫn là nhãn nguồn
+FakeNewsNet. [Đơn vị phát sóng ITV](https://www.itv.com/news/2017-01-24/ewan-mcgregor-piers-morgan-row-hollywood-star-pulls-out-of-good-morning-britain-interview) ·
+[Ví dụ fact-check đúng bài](https://politifact.com/factchecks/2017/apr/18/now8newscom/fake-news-story-says-united-flight-attendant-slapp/)
+
+| Tập | Tổng | fake | real |
+| --- | ---: | ---: | ---: |
+| Train | 23 | 11 | 12 |
+| Validation | 9 | 2 | 7 |
+| Test khóa | 33 | Riêng QA | Riêng QA |
+
+Giữ nguyên nhóm và các cạnh title-event ứng viên, chuyển nguyên nhóm
+Train sang Validation để có hai lớp. Kiểm không giao hostname hoặc
+SHA-256 ảnh giữa Train và Validation, và không đưa mẫu liên thông với
+Test vào tập con. Tập con có `manifest.jsonl` và `split.csv` riêng trong
+`data/private/afn-029-provenance/quality-no-rights-check/working-subset/`
+và đã thử nạp bằng `ml.common.load_dataset`. SHA-256 của hai tệp lần lượt
+là `188680c83b1374a3ec8681e2bde6e4ffca97d98f9bf384a1f4bdb6710d5e52ae`
+và `5cc4c127bf1d4b22a1ec8514ed52058c1e6953320bb0f81dbe8e2e7b8b40127b`.
+
+[Chỉ mục tập con](../data/afn-029-exploratory-index.json) chứa ID nguồn,
+split, nhóm và đường dẫn ảnh tương đối từ `data/` ở bản DATA `6602529`.
+Bài và ảnh giữ tại vị trí đã có. Chỉ mục không chứa ID hoặc payload Test.
+Đây là tập con để thử nghiệm thăm dò; #29 vẫn chờ audit độc lập và #49
+vẫn chờ freeze. Chưa chạy huấn luyện hoặc đánh giá Test với tập con.
+
 ## Điều kiện bỏ chặn
 
 DATA `locnguyen230` cần bàn giao metadata publisher/event theo ID hoặc bản

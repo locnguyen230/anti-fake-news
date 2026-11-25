@@ -1,0 +1,309 @@
+{
+  "rights_review": "not_performed",
+  "samples": [
+    {
+      "group_id": "quality_0002",
+      "image_path": "images/gossipcop_fake/gossipcop-3795940197.png",
+      "image_sha256": "7d9269c4095d4785cda2a80e04dc3b5b568d6d697e6eb418d4b839792850d6e5",
+      "sample_id": "gossipcop-3795940197",
+      "source": "gossipcop",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0003",
+      "image_path": "images/gossipcop_fake/gossipcop-4258497840.png",
+      "image_sha256": "50f50e2fc707096d2884aa6378e6fe78ae24b3acca5d160ec5141590315fd2f9",
+      "sample_id": "gossipcop-4258497840",
+      "source": "gossipcop",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0002",
+      "image_path": "images/gossipcop_fake/gossipcop-8105333868.png",
+      "image_sha256": "7d9269c4095d4785cda2a80e04dc3b5b568d6d697e6eb418d4b839792850d6e5",
+      "sample_id": "gossipcop-8105333868",
+      "source": "gossipcop",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0003",
+      "image_path": "images/gossipcop_fake/gossipcop-829660617.png",
+      "image_sha256": "996b5407106f72cbc02c44cdb1ca122e71de203e964ce152a06ed85d91d34bb5",
+      "sample_id": "gossipcop-829660617",
+      "source": "gossipcop",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0007",
+      "image_path": "images/gossipcop_real/gossipcop-848402.png",
+      "image_sha256": "1b7ac5b544a0eb06a10db39fe92907721dbba3c7c30f3a6371a5427ff3fcfc5c",
+      "sample_id": "gossipcop-848402",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0008",
+      "image_path": "images/gossipcop_real/gossipcop-878391.png",
+      "image_sha256": "fdef81cdd569a82e1bc4d58054da9cf8404712616f07cb6aa08598bfd53ec062",
+      "sample_id": "gossipcop-878391",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0010",
+      "image_path": "images/gossipcop_real/gossipcop-890124.png",
+      "image_sha256": "e795c6bde394cc94f7e8864b3917451e1560dbe401c2fce7f9cb3da4b2fd45e1",
+      "sample_id": "gossipcop-890124",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0011",
+      "image_path": "images/gossipcop_real/gossipcop-890284.png",
+      "image_sha256": "7356a5043b7d695711cdaade9d9630f601f1a710737a282eea1402dc7430ab65",
+      "sample_id": "gossipcop-890284",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0006",
+      "image_path": "images/gossipcop_fake/gossipcop-8996311550.png",
+      "image_sha256": "7457671ce872fb8cbb7088ac1866b7c9232c91e0aa5ead38fba66a456db7a1d7",
+      "sample_id": "gossipcop-8996311550",
+      "source": "gossipcop",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0013",
+      "image_path": "images/gossipcop_real/gossipcop-908254.png",
+      "image_sha256": "7ce7fbd620fc2f43e0cb5699ff384af22b96f2dfe0c8ccd4c9ad8bc28dcc02f6",
+      "sample_id": "gossipcop-908254",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0005",
+      "image_path": "images/gossipcop_real/gossipcop-908402.png",
+      "image_sha256": "6d3a2289a85dc60e63111b601d7bcac813c08e2d43889c49fc757dea36a5f66c",
+      "sample_id": "gossipcop-908402",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0014",
+      "image_path": "images/gossipcop_real/gossipcop-908630.png",
+      "image_sha256": "ed5775dd3b9e4c019d6ca4a9eb394d493d579485c7ab1d80c4ddd04730c672d8",
+      "sample_id": "gossipcop-908630",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0005",
+      "image_path": "images/gossipcop_real/gossipcop-918922.png",
+      "image_sha256": "3a16f26a60a84a25247aa4c3792368c0435bb886e0e300a093afdf0ec93cada3",
+      "sample_id": "gossipcop-918922",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0008",
+      "image_path": "images/gossipcop_fake/gossipcop-9212719071.png",
+      "image_sha256": "7126c481bf9d009e22b4191f39dc76c69acc7224804d35a30b41b813f512fcac",
+      "sample_id": "gossipcop-9212719071",
+      "source": "gossipcop",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0015",
+      "image_path": "images/gossipcop_real/gossipcop-926957.png",
+      "image_sha256": "e9ec1ab5bc43569db36a050c430ed7a48e1de072965543014902c088aa355d7b",
+      "sample_id": "gossipcop-926957",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0016",
+      "image_path": "images/gossipcop_real/gossipcop-935087.png",
+      "image_sha256": "657f69d2e60faae5fdf75fc4d8c9fafe6a581ce08a1d2a807ebc016727166525",
+      "sample_id": "gossipcop-935087",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0017",
+      "image_path": "images/gossipcop_real/gossipcop-947934.png",
+      "image_sha256": "96f724ecd780c005c422af12398da070aa510f2bf1bedf6903dc0f96074f2176",
+      "sample_id": "gossipcop-947934",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0018",
+      "image_path": "images/gossipcop_fake/gossipcop-9503284683.png",
+      "image_sha256": "759cbd0746f8eb42d997018aa1e83a6e0bb56f3c253bcd145a96d464815b1886",
+      "sample_id": "gossipcop-9503284683",
+      "source": "gossipcop",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0019",
+      "image_path": "images/gossipcop_real/gossipcop-950749.png",
+      "image_sha256": "ec9d3a24ec59c57b682cd0ee2284db00077867ba16a0bac7be69e33f9452c87b",
+      "sample_id": "gossipcop-950749",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0021",
+      "image_path": "images/politifact_fake/politifact14005.png",
+      "image_sha256": "ce2fc4a890622d4d9764cd4784bd4e728fd4791269e7070e9ea4481efc6d3b91",
+      "sample_id": "politifact14005",
+      "source": "politifact",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0022",
+      "image_path": "images/politifact_fake/politifact14238.png",
+      "image_sha256": "873c12d1744102c0363e26cc87779456e3f26150f895b46687cd3ea4f5e87d69",
+      "sample_id": "politifact14238",
+      "source": "politifact",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0023",
+      "image_path": "images/politifact_fake/politifact14327.png",
+      "image_sha256": "e87633ecf0db51e6dd8f01d33af77830c05c67903382d7a3345e8a17117d785f",
+      "sample_id": "politifact14327",
+      "source": "politifact",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0024",
+      "image_path": "images/politifact_fake/politifact14564.png",
+      "image_sha256": "7504123a6cec73d84a401dd10ef1cd2987493c211791e4f663dc7b892e5f5fad",
+      "sample_id": "politifact14564",
+      "source": "politifact",
+      "source_label": "fake",
+      "split": "train"
+    },
+    {
+      "group_id": "quality_0001",
+      "image_path": "images/gossipcop_fake/gossipcop-5035404255.png",
+      "image_sha256": "0c067b7d93b1116e44d71c5154b184981156447eec3ff7c74d2f80b5b6850585",
+      "sample_id": "gossipcop-5035404255",
+      "source": "gossipcop",
+      "source_label": "fake",
+      "split": "validation"
+    },
+    {
+      "group_id": "quality_0004",
+      "image_path": "images/gossipcop_real/gossipcop-868602.png",
+      "image_sha256": "d0246788c6064da71f508e4a9125856c3c58764840c02b964dd33e4cb63bf8a0",
+      "sample_id": "gossipcop-868602",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "validation"
+    },
+    {
+      "group_id": "quality_0009",
+      "image_path": "images/gossipcop_real/gossipcop-884026.png",
+      "image_sha256": "8741d9408cea65843233c5d7acf74d12056e93a0c287162a4259a83bf4d9c837",
+      "sample_id": "gossipcop-884026",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "validation"
+    },
+    {
+      "group_id": "quality_0004",
+      "image_path": "images/gossipcop_real/gossipcop-896255.png",
+      "image_sha256": "e7e5ccd6e148a0dd29005611a3259a94941e7badfa371e796f060e1a3102abdd",
+      "sample_id": "gossipcop-896255",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "validation"
+    },
+    {
+      "group_id": "quality_0012",
+      "image_path": "images/gossipcop_real/gossipcop-896517.png",
+      "image_sha256": "1d013c43de23e6284bfef0d48f54e5c027b389a525d8a0d4d001f81941d76573",
+      "sample_id": "gossipcop-896517",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "validation"
+    },
+    {
+      "group_id": "quality_0012",
+      "image_path": "images/gossipcop_real/gossipcop-898585.png",
+      "image_sha256": "cd8ef9e86ec67ff4f54a15e5ef6b2f19e110fbfdc829c8a4fe9eba14e1864e33",
+      "sample_id": "gossipcop-898585",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "validation"
+    },
+    {
+      "group_id": "quality_0004",
+      "image_path": "images/gossipcop_real/gossipcop-917421.png",
+      "image_sha256": "33f6800e71108d13618fba2b215880dfb37fa9a89f94f32b921c0f6ca89171b8",
+      "sample_id": "gossipcop-917421",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "validation"
+    },
+    {
+      "group_id": "quality_0004",
+      "image_path": "images/gossipcop_real/gossipcop-931325.png",
+      "image_sha256": "57a65c14d16e2552b00f8fb3e994dcf9e591077b10b74c90e686e5ca919ca53f",
+      "sample_id": "gossipcop-931325",
+      "source": "gossipcop",
+      "source_label": "real",
+      "split": "validation"
+    },
+    {
+      "group_id": "quality_0020",
+      "image_path": "images/politifact_fake/politifact13557.png",
+      "image_sha256": "fb68bc4760e9cb075349ed38d8d90c442a23c710f9b4da5d38812616b6299f11",
+      "sample_id": "politifact13557",
+      "source": "politifact",
+      "source_label": "fake",
+      "split": "validation"
+    }
+  ],
+  "schema": "afn-029-exploratory-pair-index-v1",
+  "source_export_commit": "6602529",
+  "split_label_counts": {
+    "train": {
+      "fake": 11,
+      "real": 12
+    },
+    "validation": {
+      "fake": 2,
+      "real": 7
+    }
+  },
+  "status": "source_labelled_exploratory_subset",
+  "test_membership_included": false,
+  "test_payload_included": false,
+  "test_rows_held": 33
+}
