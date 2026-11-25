@@ -85,6 +85,40 @@ lập do QA nhận từ AFN-017/018.
 python -m scripts.audit_split --release <private-release> --grouping <private-grouping> --summary-sha256 <sha256-tu-AFN-018> --audit-sha256 <sha256-tu-AFN-017>
 ```
 
+## Khôi phục metadata nguồn
+
+Đối chiếu cả bốn CSV FakeNewsNet tại commit
+`654361e1c8d5baa751baf1dac5032df621652280` với CSV split QA. Khớp đúng một
+bản ghi cho cả **218/218 ID**. Lấy hostname từ URL gốc, chuẩn hóa `www.`
+và tách URL gốc từ đường dẫn Wayback khi có. Đã điền **218/218 hostname
+publisher dạng đề xuất**. Việc xác nhận nhà xuất bản thật và quyền sử dụng
+vẫn cần DATA đối chiếu bản thu hồi.
+[CSV nguồn FakeNewsNet](https://github.com/KaiDMML/FakeNewsNet/tree/654361e1c8d5baa751baf1dac5032df621652280/dataset)
+
+Bản xuất DATA có trường `group_event` nhưng không có giá trị đã gán. CSV
+nguồn cũng không cấp event ID. `event_id` được để trống và bảng review có
+**13 cặp** từ độ giống tiêu đề nguồn với ngưỡng ứng viên AFN-017, trong đó
+**2 cặp qua split**. Đây là danh sách để DATA xem cùng bằng chứng sự kiện.
+Không có cặp trùng URL bài sau chuẩn hóa trong tập đối chiếu.
+
+Khi dùng hostname đề xuất để rà split hiện hành, **33 hostname** có mặt ở
+nhiều nhóm, trong đó **21 hostname** xuất hiện ở nhiều split. Kết quả
+audit vẫn `BLOCKED`. DATA cần xác nhận hostname, xử lý hai cặp ứng viên
+qua split và bàn giao checksum; nếu quan hệ được xác nhận, gộp nhóm và
+chia lại theo giao thức trước khi chạy lại Train/Validation.
+
+```powershell
+python -m scripts.recover_split_provenance --source-dir data/private/afn-029-provenance/source --qa-split data/private/afn-029-a/qa-only/split.csv --out data/private/afn-029-provenance/draft
+```
+
+Script ghim SHA-256 của bốn CSV nguồn, ghi `provenance-draft.csv`,
+`source-evidence.csv`, `event-candidates.csv` và `summary.json` vào thư mục
+riêng. Hai lượt chạy cho cùng checksum các tệp. SHA-256 của CSV metadata
+nháp là `d6e830893641ae922f0aad02e180361a29100b39b98ad4286b688c526b950305`.
+Bảng dùng ID trong CSV QA và metadata nguồn; không đọc thân bài, ảnh hoặc
+dự đoán Test. Giữ tệp theo ID trong kho QA. Chỉ dữ liệu tổng hợp xuất hiện
+trong báo cáo này.
+
 ## Điều kiện bỏ chặn
 
 DATA `locnguyen230` cần bàn giao metadata publisher/event theo ID hoặc bản
