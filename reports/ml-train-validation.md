@@ -61,7 +61,25 @@ Chênh lệch giữa các C và giữa các cấu hình phần lớn nằm trong
 đoán ngẫu nhiên. Multimodal chưa vượt Text-only trên Validation. Theo protocol, điều này được báo
 cáo đúng như số đo, không ép Multimodal phải thắng. Đây chưa phải kết quả cuối: kết quả cuối là Test (#50), chạy sau #49.
 
-Run: `cache/runs/20261125T144056Z/results.json`.
+Mỗi cấu hình được chọn vì có Macro-F1 cao nhất trong lưới (không cần dùng luật hòa).
+Mức hơn ứng viên kế tiếp: Text +0,004, Image +0,003, Multimodal +0,030. Không có cảnh báo không hội tụ.
+
+Ma trận nhầm lẫn trên Validation (hàng = nhãn thật fake/real, cột = dự đoán fake/real):
+
+| Cấu hình | fake → fake | fake → real | real → fake | real → real |
+| --- | ---: | ---: | ---: | ---: |
+| Text-only | 10 | 7 | 3 | 12 |
+| Image-only | 17 | 0 | 12 | 3 |
+| Multimodal | 11 | 6 | 6 | 9 |
+
+Image-only gần như đoán mọi bài là fake (ngưỡng 0,30), nên Macro-F1 thấp dù bắt đủ 17/17 bài fake.
+
+**Đầu ra theo issue #34:**
+- [`reports/validation-search.json`](validation-search.json): toàn bộ lưới C × ngưỡng, lý do chọn
+  (`selection_reason`), precision/recall/F1 theo lớp và ma trận nhầm lẫn, cảnh báo hội tụ, thời gian
+  (`fit_seconds_by_C`, `timing_seconds`), phiên bản thư viện, hash đầu vào. Không có ID mẫu, chỉ có hash thứ tự.
+- [`configs/selected-models.json`](../configs/selected-models.json): C/ngưỡng đã chọn cho từng cấu hình
+  (`status: candidate`), dùng làm đầu vào cho #35.
 
 ## 3. Còn mở
 
@@ -78,7 +96,8 @@ Run: `cache/runs/20261125T144056Z/results.json`.
 .venv/bin/python -m ml.prepare_dataset --manifest data/processed/manifest.json \
     --groups data/processed/groups.json --image-root data --out data/private/ml-v2
 H=data/private/ml-v2/train-validation
-.venv/bin/python -m ml.run_experiments --manifest $H/manifest.jsonl --split $H/split.csv --image-root data --offline
+.venv/bin/python -m ml.run_experiments --manifest $H/manifest.jsonl --split $H/split.csv --image-root data --offline \
+    --search-report reports/validation-search.json --selected-models configs/selected-models.json
 ```
 
 `ml.prepare_dataset` import script của DATA nên cần `jsonschema` (chưa có trong requirements).

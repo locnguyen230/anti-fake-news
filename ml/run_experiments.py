@@ -9,13 +9,20 @@ separate command owned by #50 after the #49 freeze sign-off.
         --image-root DIR --out-dir cache/runs [--offline]
 
 Writes ``<out-dir>/<run-id>/results.json`` with the config, input hashes,
-sample-order hashes, versions, full C x threshold grid and selections.
+sample-order hashes, versions, full C x threshold grid, selection reasons,
+per-class Validation metrics and timings. The #34 deliverables are written with
+
+    --search-report reports/validation-search.json --selected-models configs/selected-models.json
+
+``selected-models.json`` holds only what #35 needs to export: C, threshold and
+Validation Macro-F1 per configuration plus the input hashes they were chosen on.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
@@ -51,22 +58,68 @@ def run_all(dataset: Dataset, cfg: dict[str, Any], encoder: ImageEncoder | None,
         raise PermissionError("run_experiments must not receive Test rows")
     train, val = dataset.rows("train"), dataset.rows("validation")
     results: dict[str, Any] = {}
-    text = build_text_features(train, val, cfg) if {"text-only", "multimodal"} & set(configs) else None
-    emb = None
+    feature_seconds: dict[str, float] = {}
+    text = emb = None
+    if {"text-only", "multimodal"} & set(configs):
+        start = time.perf_counter()
+        text = build_text_features(train, val, cfg)
+        feature_seconds["text"] = round(time.perf_counter() - start, 6)
     if {"image-only", "multimodal"} & set(configs):
         if encoder is None:
             raise ValueError("an image encoder is required for image configurations")
+        start = time.perf_counter()
         emb = build_image_features(dataset, encoder, cfg, cache)
-    if "text-only" in configs:
-        results["text-only"] = run_text_only(dataset, cfg, text)
-    if "image-only" in configs:
-        results["image-only"] = run_image_only(dataset, cfg, *emb)
-    if "multimodal" in configs:
-        results["multimodal"] = run_multimodal(dataset, cfg, text, *emb)
+        feature_seconds["image"] = round(time.perf_counter() - start, 6)  # includes cache hits
+    runners = {"text-only": lambda: run_text_only(dataset, cfg, text),
+               "image-only": lambda: run_image_only(dataset, cfg, *emb),
+               "multimodal": lambda: run_multimodal(dataset, cfg, text, *emb)}
+    uses = {"text-only": ("text",), "image-only": ("image",), "multimodal": ("text", "image")}
+    for name in ALL_CONFIGS:
+        if name not in configs:
+            continue
+        start = time.perf_counter()
+        results[name] = runners[name]()
+        results[name]["timing_seconds"] = {
+            "tune": round(time.perf_counter() - start, 6),
+            "shared_features": {k: feature_seconds[k] for k in uses[name]},
+        }
     orders = {(r["train_order_sha256"], r["validation_order_sha256"]) for r in results.values()}
     if len(orders) != 1:
         raise RuntimeError("configurations did not use the same split order")
     return results
+
+
+def selected_models(report: dict[str, Any]) -> dict[str, Any]:
+    """Compact #34 hand-off to #35: the chosen hyper-parameters, nothing fitted."""
+    return {
+        "schema": "afn-selected-models-v1",
+        "status": "candidate",  # only #49 may freeze a model
+        "run_id": report["run_id"],
+        "evidence_kind": report["evidence_kind"],
+        "selection_split": "validation",
+        "metric": report["experiment_config"]["selection"]["metric"],
+        "inputs": report["inputs"],
+        "test_split": report["test_split"],
+        "configurations": {
+            name: {
+                "C": r["selected"]["C"],
+                "threshold": r["selected"]["threshold"],
+                "validation_macro_f1": r["selected"]["validation_macro_f1"],
+                "decided_by": r["selection_reason"]["decided_by"],
+                "feature_dim": r["feature_dim"],
+                "n_train": r["n_train"],
+                "n_validation": r["n_validation"],
+                "train_order_sha256": r["train_order_sha256"],
+                "validation_order_sha256": r["validation_order_sha256"],
+            }
+            for name, r in report["results"].items()
+        },
+    }
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -81,6 +134,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--hf-cache-dir", type=Path, default=None)
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--out-dir", type=Path, default=REPO_ROOT / "cache" / "runs")
+    parser.add_argument("--search-report", type=Path, default=None,
+                        help="also write the full report here (#34: reports/validation-search.json)")
+    parser.add_argument("--selected-models", type=Path, default=None,
+                        help="write the chosen C/threshold per configuration (#34: configs/selected-models.json)")
     args = parser.parse_args(argv)
 
     config_path = args.config or REPO_ROOT / "configs" / "experiment.yaml"
@@ -106,13 +163,16 @@ def main(argv: list[str] | None = None) -> int:
         "results": results,
     }
     out = args.out_dir / run_id / "results.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    _write_json(out, report)
+    if args.search_report:
+        _write_json(args.search_report, report)
+    if args.selected_models:
+        _write_json(args.selected_models, selected_models(report))
     print(f"[{report['evidence_kind']}] results: {out}")
     for name, r in results.items():
         sel = r["selected"]
         print(f"  {name:11s} dim={r['feature_dim']:5d}  C={sel['C']:<6}  thr={sel['threshold']:.2f}  "
-              f"val_macro_f1={sel['validation_macro_f1']:.4f}")
+              f"val_macro_f1={sel['validation_macro_f1']:.4f}  ({r['selection_reason']['decided_by']})")
     print(f"  Test: not loaded ({report['test_split']['locked_rows']} rows locked until #49 sign-off)")
     return 0
 
