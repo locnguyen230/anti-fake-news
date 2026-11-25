@@ -121,6 +121,67 @@ Bảng dùng ID trong CSV QA và metadata nguồn; không đọc thân bài, ả
 dự đoán Test. Giữ tệp theo ID trong kho QA. Chỉ dữ liệu tổng hợp xuất hiện
 trong báo cáo này.
 
+## Xác thực URL và thử tách publisher trước freeze
+
+Ngày 25/11/2026. Gửi HEAD đến 218 URL nguồn, theo tối đa bốn chuyển hướng
+trong mỗi lượt kiểm. Kiểm URL công khai và ghi hostname phản hồi. Không
+tải thân bài, ảnh hoặc dự đoán Test. Điểm đo là trạng thái server tại thời
+gian kiểm tra. HEAD 2xx chỉ xác nhận URL phản hồi, còn publisher của nội
+dung đã thu hồi và quyền sử dụng cần bằng chứng riêng.
+
+| Kết quả HEAD | Số mẫu |
+| --- | ---: |
+| 2xx cùng hostname đề xuất | 126 |
+| 2xx trên hostname khác | 24 |
+| 2xx tại trang gốc/landing page | 4 |
+| 403 | 40 |
+| 404 | 8 |
+| HTTP khác | 7 |
+| Timeout hoặc lỗi kết nối/URL | 9 |
+| Tổng | 218 |
+
+QA giữ bảng `publisher-review.csv` cùng URL nguồn và hostname cuối theo
+ID để xác minh hai trường hợp chuyển hướng và website chặn HEAD. SHA-256
+của bảng là `560815c314e6e43e08f0d73a881d90f74a796426c0553448c99578ae630fa36a`.
+Manifest Train/Validation hiện có **185/185 dòng `rights: unverified`**.
+Quyền sử dụng được quyết định theo điều khoản và bằng chứng từng tài nguyên.
+[Hợp đồng dữ liệu](../docs/data-contract.md)
+
+### Thử cách ly xung đột và giữ nguyên Test
+
+Dùng các nhóm `ml-v2` làm nền, nối bắc cầu theo hostname đề xuất. Thử thêm
+một phương án nhạy cảm coi cả 13 cặp tiêu đề là cạnh tiềm năng. Giữ đúng
+33 ID Test. Cách ly dòng Train/Validation chung thành phần liên thông với
+Test và chia phần còn lại theo nhóm. Chọn nhóm Validation gần 15% tổng số
+mẫu giữ lại, cân đối nguồn × nhãn và ưu tiên ít đổi tập khi hòa. Kiểm lại
+tập ID Test và xác nhận hostname xuất hiện ở đúng một split trong phần giữ lại.
+
+| Kịch bản | Train | Validation | Test khóa | Cách ly | Mẫu giữ lại | Thiếu so với 200 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Nối hostname | 118 | 27 | 33 | 40 | 178 | 22 |
+| Nối hostname và 13 cặp ứng viên để thử độ nhạy | 104 | 24 | 33 | 57 | 161 | 39 |
+
+Cả ba split đủ hai nhãn trong cả hai kịch bản. Phương án đầu có 79/18/30
+nhóm. Phương án nhạy cảm có 74/18/29 nhóm. Chia tự do theo bộ phân bổ
+hiện hành cho tỷ lệ gần 70/15/15 nhưng sẽ đưa 26 ID Test cũ vào
+Train/Validation, nên phương án đó chỉ dùng làm đối chứng tính toán.
+Nếu điều chỉnh bằng cách chuyển toàn bộ nhóm xung đột vào Test, Test tăng
+từ 33 lên 73 mẫu trước khi xét cạnh sự kiện.
+
+CSV hai bản nháp giữ riêng ở QA. SHA-256 lần lượt là
+`156f17ea5b0d28ddb6317bd9bb3e4d3fb8a98bfe9722c5a26e2f1766cfed5d6c` và
+`80b91f603daae6cf547e36a48e3b7b7ca06a3008275ffd66167961af21e9df98`.
+Chưa dùng các bảng để huấn luyện, mở Test hoặc thay split chính thức.
+
+DATA cần xác nhận publisher/event và quyền sử dụng, sau đó chọn tập nháp
+để bổ sung mẫu hợp lệ từ nhóm độc lập với Test. Nếu mọi mẫu trong bản
+nháp được chấp thuận, bản nối hostname cần tối thiểu 22 mẫu để đạt mục
+tiêu 200. Nếu giữ quy mô dưới mục tiêu, DATA/ML/QA cần chốt phạm vi nghiên
+cứu thăm dò theo thiết kế. QA ký split phiên bản mới trước lượt
+Train/Validation làm bằng chứng nghiệm thu. Freeze #49 còn yêu cầu đúng
+artifact, tham số và chữ ký ML/QA. [Thiết kế](../DESIGN.md) ·
+[AFN-049](https://github.com/ngnsusinn/anti-fake-news/issues/49)
+
 ## Điều kiện bỏ chặn
 
 DATA `locnguyen230` cần bàn giao metadata publisher/event theo ID hoặc bản
