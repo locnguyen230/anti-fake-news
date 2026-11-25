@@ -243,6 +243,36 @@ Chưa có mẫu bổ sung đủ điều kiện nhập split. Mốc thiếu 24 gi
 200 chỉ dùng cho hướng thăm dò theo điều kiện của nhóm. Không thay
 manifest, nhãn hoặc split đã dùng ở #34. [Phạm vi dữ liệu](../DEFINE.md)
 
+## Đối chiếu nhãn với đúng bài trước khi thay mẫu
+
+Ngày 25/11/2026. So URL FakeNewsNet với đối tượng được chấm trong bài
+fact-check. Một URL có quyền dùng vẫn bị loại nếu nhãn áp dụng cho một
+bài hoặc phát ngôn khác.
+
+| URL nguồn đối chiếu | Quyết định |
+| --- | --- |
+| Thông cáo DOJ về việc Jeff Sessions rút khỏi cuộc điều tra | Loại ứng viên. Thông cáo là nguồn dẫn; bài trên The Conservative Patriot mới là đối tượng được chấm. [Fact-check](https://politifact.com/factchecks/2018/may/23/blog-posting/false-claim-jeff-sessions-caught-collud/) |
+| Thông cáo FDA về hiệu quả vaccine cúm | Loại ứng viên. Nhãn áp dụng cho tiêu đề Meddaily; FDA là nguồn dẫn. [Fact-check](https://politifact.com/factchecks/2018/mar/09/meddaily/no-flu-shot-was-not-designed-spread-cancer/) |
+| Tuyên bố chung DHS/ODNI | Loại ứng viên. Bài fact-check chấm phát ngôn tranh luận; tuyên bố là bằng chứng được dẫn. [Fact-check](https://api.politifact.com/factchecks/2016/oct/20/hillary-clinton/hillary-clinton-blames-russia-putin-wikileaks-rele/) |
+| Thông báo thu hồi sản phẩm CPSC năm 2017 | Loại khỏi bản nháp. Bài được chấm đăng năm 2018 đã dùng lại thông tin thu hồi cũ. [Thông báo CPSC](https://www.cpsc.gov/Recalls/2017/target-recalls-water-absorbing-toys) · [Fact-check](https://politifact.com/factchecks/2018/mar/06/blog-posting/website-recycles-2017-information-claim-target-rec/) |
+| Bản ghi phỏng vấn Democracy Now! | Loại khỏi danh sách thay thế. Có quyền đăng lại transcript khi ghi công, nhưng PolitiFact chấm nhiều phát ngôn khác nhau trong cùng cuộc phỏng vấn. [Quyền transcript](https://www.democracynow.org/get_involved/spread_the_word/reprint_transcripts) · [Các phán quyết](https://politifact.com/article/2008/jun/30/nader-on-the-attack/) |
+| Hai bài The Conversation | Chờ bằng chứng. Xác minh được tác giả và bài đăng lại. Bài gắn nhãn `fake` còn thiếu bằng chứng nhãn áp dụng đúng bài; bài còn lại dùng ảnh ghi công AP. Điều khoản đăng lại bài và quyền ảnh cần đối chiếu riêng. [Bài của Ronald Hall](https://atlantadailyworld.com/2018/02/05/black-americas-bleaching-syndrome/) · [Bài của Ashraf Rushdy](https://newsletter.blogs.wesleyan.edu/2018/02/13/ashraf-rushdy-in-the-conversation-the-art-of-the-public-apology/) · [Hướng dẫn đăng lại](https://theconversation.com/us/republishing-guidelines) |
+
+Danh sách quyết định và nguồn theo ID được giữ ở vùng QA. Chạy lại bản
+chia nháp sau khi bỏ thêm dòng CPSC. Kiểm đủ hai lớp ở mỗi split, hash
+của cả hai CSV và giữ nguyên đúng 33 ID Test.
+
+| Kịch bản | Train / Validation / Test | Tổng | Thiếu để đạt 200 |
+| --- | --- | ---: | ---: |
+| Nối hostname | 116 / 26 / 33 | 175 | 25 |
+| Thêm các cạnh sự kiện ứng viên | 101 / 24 / 33 | 158 | 42 |
+
+SHA-256 của bản nháp nối hostname là
+`1f45fa9b6a98b54d835cc6556ba6d50f0675e0ce0ccb58e4cd70b84a9b9a171d`.
+Chưa có mẫu mới vượt qua cả cổng nhãn, quyền bài/ảnh và quan hệ với Test.
+Mốc thiếu 25 giả định cả 175 mẫu còn lại đều được duyệt. Giữ nguyên bản
+chính thức và không dùng bản nháp để huấn luyện.
+
 ## Điều kiện bỏ chặn
 
 DATA `locnguyen230` cần bàn giao metadata publisher/event theo ID hoặc bản
