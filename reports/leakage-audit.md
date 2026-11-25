@@ -273,6 +273,34 @@ Chưa có mẫu mới vượt qua cả cổng nhãn, quyền bài/ảnh và quan
 Mốc thiếu 25 giả định cả 175 mẫu còn lại đều được duyệt. Giữ nguyên bản
 chính thức và không dùng bản nháp để huấn luyện.
 
+## Duyệt bản thăm dò 175 mẫu
+
+Ngày 25/11/2026. Bỏ mục tiêu tối thiểu 200 theo quyết định của chủ repo.
+Đối chiếu từng ID trong bản nháp `116/26/33` với nguồn và split gốc. Không
+có nhóm hoặc hostname đề xuất giao giữa các split. 142 mẫu Train/Validation
+đạt kiểm tra tiền xử lý văn bản, checksum và giải mã ảnh. Các phép kiểm
+này xác nhận tính toàn vẹn kỹ thuật của tệp.
+
+| Kết quả duyệt | Số mẫu |
+| --- | ---: |
+| Loại trang tham khảo bách khoa khỏi nhóm bài nghiên cứu | 8 |
+| Chờ bằng chứng quyền từng bài/ảnh và đối chiếu đúng đối tượng nhãn | 132 |
+| Chờ giấy phép riêng cho hai publisher có chính sách công bố quyền | 2 |
+| Test giữ nguyên và chỉ kiểm metadata QA | 33 |
+| Có đủ bằng chứng để phát hành công khai | 0 |
+
+Hai mẫu chờ giấy phép riêng đến từ WBUR và Jamaica Information Service.
+Bảng quyết định theo ID nằm trong `data/private/afn-029-provenance/review175/`.
+Số liệu công khai và checksum của bản chia nằm trong
+[bản tổng hợp QA](afn-029-exploratory-review.json).
+[Chính sách WBUR](https://www.wbur.org/inside/licensing-wbur-content) ·
+[Thông báo quyền JIS](https://jis.gov.jm/category/opm/page/70/?category=health)
+
+Trạng thái nghiệm thu dữ liệu tiếp tục `BLOCKED`. Bỏ mốc số lượng cho
+phép đánh giá thăm dò khi có tập đã được duyệt với hai lớp và nhóm độc
+lập. 33 ID Test được giữ nguyên và payload vẫn khóa theo #49. Chưa chấp
+thuận mẫu nào cho huấn luyện hoặc phát hành dựa trên lượt duyệt này.
+
 ## Điều kiện bỏ chặn
 
 DATA `locnguyen230` cần bàn giao metadata publisher/event theo ID hoặc bản
