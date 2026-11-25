@@ -58,6 +58,11 @@ entry hỏng sẽ bị bỏ qua và tính lại. Mặc định ở `cache/embedd
 ## Lệnh chạy
 
 ```sh
+# Dữ liệu thật (bản xuất DATA ở PR #87): lọc + gom nhóm lại + chia lại -> data/private/ml-v2
+# Chi tiết và kết quả: reports/ml-train-validation.md
+.venv/bin/python -m ml.prepare_dataset --manifest data/processed/manifest.json \
+    --groups data/processed/groups.json --image-root data --out data/private/ml-v2
+
 # Dữ liệu tổng hợp (manifest Train/Validation + split audit + ảnh PNG, is_fixture: true)
 .venv/bin/python -m ml.fixtures --out cache/ml-fixture
 
