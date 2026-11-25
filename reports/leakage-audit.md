@@ -101,6 +101,8 @@ nguồn cũng không cấp event ID. `event_id` được để trống và bản
 **2 cặp qua split**. Đây là danh sách để DATA xem cùng bằng chứng sự kiện.
 Không có cặp trùng URL bài sau chuẩn hóa trong tập đối chiếu.
 
+Đã rà sơ bộ tiêu đề nguồn của cả 13 cặp. Hai cặp qua split có tên người trùng nhưng tiêu đề mô tả tình huống khác nhau. Chưa có cặp nào đủ bằng chứng để gán cùng event ID. Nhận định theo cặp được lưu trong `event-review-draft.csv` của QA để DATA đối chiếu.
+
 Khi dùng hostname đề xuất để rà split hiện hành, **33 hostname** có mặt ở
 nhiều nhóm, trong đó **21 hostname** xuất hiện ở nhiều split. Kết quả
 audit vẫn `BLOCKED`. DATA cần xác nhận hostname, xử lý hai cặp ứng viên
