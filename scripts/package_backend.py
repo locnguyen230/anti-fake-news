@@ -1,4 +1,4 @@
-"""Package only the portable Backend source and smoke tooling as a ZIP."""
+"""Package the portable production Backend as a ZIP."""
 
 import argparse
 from pathlib import Path
@@ -12,8 +12,6 @@ RUNTIME_FILES = (
     "backend/app/__main__.py",
     "backend/app/clip_encoder.py",
     "backend/app/config.py",
-    "backend/app/dev/__init__.py",
-    "backend/app/dev/mock_predictor.py",
     "backend/app/errors.py",
     "backend/app/image_validation.py",
     "backend/app/inference_adapter.py",
@@ -26,7 +24,6 @@ RUNTIME_FILES = (
     "backend/app/validation.py",
     "backend/artifacts/metadata.schema.json",
     "backend/requirements.txt",
-    "backend/tests/smoke_local.py",
     "configs/clip-reference.json",
     "docs/backend-setup.md",
     "ml/requirements.txt",

@@ -41,8 +41,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Resolve config at startup; importing this module never loads artifacts.
-        app.state.settings = settings if settings is not None else Settings()
-        adapter = await run_in_threadpool(create_adapter, app.state.settings)
+        runtime = settings if settings is not None else Settings()
+        adapter = await run_in_threadpool(create_adapter, runtime)
+        if runtime.environment == "production" and not adapter.ready:
+            raise RuntimeError(
+                "Production startup failed. Check the frozen multimodal bundle, "
+                "its approved metadata SHA-256, and the pinned offline CLIP cache."
+            )
+        app.state.settings = runtime
         app.state.inference_adapter = adapter
         app.state.predictor = adapter if adapter.ready else None
         try:
