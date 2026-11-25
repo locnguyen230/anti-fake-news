@@ -11,6 +11,7 @@ import csv
 import hashlib
 import json
 import platform
+import time
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -266,6 +267,54 @@ def selection_key(score: float, c: float, threshold: float, decimals: int) -> tu
     return (-round(score, decimals), round(abs(threshold - 0.5), decimals), c, threshold)
 
 
+TIE_BREAK_RULES = ("closest_threshold_to_0_5", "lower_c", "lower_threshold")
+
+
+def selection_reason(grid: Sequence[dict[str, float]], decimals: int) -> dict[str, Any]:
+    """Explain which protocol step picked the winner of ``grid``.
+
+    ``decided_by`` is ``highest_macro_f1`` when one candidate has the best rounded
+    score, otherwise the first tie-break rule that leaves a single candidate.
+    """
+    ranked = sorted(grid, key=lambda g: selection_key(g["macro_f1"], g["C"], g["threshold"], decimals))
+    best = ranked[0]
+    best_score = round(best["macro_f1"], decimals)
+    tied = [g for g in ranked if round(g["macro_f1"], decimals) == best_score]
+    decided_by = "highest_macro_f1"
+    if len(tied) > 1:
+        keys = [selection_key(g["macro_f1"], g["C"], g["threshold"], decimals) for g in tied]
+        for step, rule in enumerate(TIE_BREAK_RULES, start=1):
+            if sum(1 for k in keys if k[:step + 1] == keys[0][:step + 1]) == 1:
+                decided_by = rule
+                break
+    runner_up = next((g for g in ranked if round(g["macro_f1"], decimals) < best_score), None)
+    return {
+        "decided_by": decided_by,
+        "tie_break_order": list(TIE_BREAK_RULES),
+        "candidates_evaluated": len(grid),
+        "tied_at_best": [{"C": g["C"], "threshold": g["threshold"]} for g in tied],
+        "next_best_macro_f1": runner_up["macro_f1"] if runner_up else None,
+        "margin_to_next_best": (round(best["macro_f1"] - runner_up["macro_f1"], decimals)
+                                if runner_up else None),
+    }
+
+
+def validation_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, Any]:
+    """Per-class precision/recall/F1 and confusion matrix (rows = true, cols = predicted)."""
+    from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
+
+    precision, recall, f1, support = precision_recall_fscore_support(
+        y_true, y_pred, labels=[1, 0], zero_division=0)
+    per_class = {
+        name: {"precision": float(precision[i]), "recall": float(recall[i]),
+               "f1": float(f1[i]), "support": int(support[i])}
+        for i, name in enumerate(("fake", "real"))
+    }
+    matrix = confusion_matrix(y_true, y_pred, labels=[1, 0])
+    return {"per_class": per_class, "accuracy": float((y_true == y_pred).mean()),
+            "confusion_matrix": {"labels": ["fake", "real"], "rows_true_cols_pred": matrix.tolist()}}
+
+
 @dataclass
 class TuneResult:
     best_c: float
@@ -274,6 +323,9 @@ class TuneResult:
     grid: list[dict[str, float]]
     convergence_warnings: list[float]
     model: Any  # fitted on Train with best_c
+    fit_seconds: dict[float, float] = field(default_factory=dict)
+    reason: dict[str, Any] = field(default_factory=dict)
+    metrics: dict[str, Any] = field(default_factory=dict)
 
 
 def tune_on_validation(X_train, y_train, X_val, y_val, cfg: dict[str, Any]) -> TuneResult:
@@ -288,22 +340,28 @@ def tune_on_validation(X_train, y_train, X_val, y_val, cfg: dict[str, Any]) -> T
         raise DataContractError("only greater_than_or_equal thresholds are supported")
     grid: list[dict[str, float]] = []
     models: dict[float, Any] = {}
+    val_scores: dict[float, np.ndarray] = {}
     not_converged: list[float] = []
+    fit_seconds: dict[float, float] = {}
     for c in sel["c_candidates"]:
         model = make_logistic_regression(float(c), cfg)
+        start = time.perf_counter()
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always", ConvergenceWarning)
             model.fit(X_train, y_train)
+        fit_seconds[float(c)] = round(time.perf_counter() - start, 6)
         if any(issubclass(w.category, ConvergenceWarning) for w in caught):
             not_converged.append(float(c))
         models[float(c)] = model
-        scores = fake_scores(model, X_val)
+        scores = val_scores[float(c)] = fake_scores(model, X_val)
         for t in sel["threshold_candidates"]:
             pred = (scores >= float(t)).astype(np.int64)
             grid.append({"C": float(c), "threshold": float(t), "macro_f1": macro_f1(y_val, pred)})
     best = min(grid, key=lambda g: selection_key(g["macro_f1"], g["C"], g["threshold"], decimals))
+    best_pred = (val_scores[best["C"]] >= best["threshold"]).astype(np.int64)
     return TuneResult(best["C"], best["threshold"], best["macro_f1"], grid, not_converged,
-                      models[best["C"]])
+                      models[best["C"]], fit_seconds, selection_reason(grid, decimals),
+                      validation_metrics(y_val, best_pred))
 
 
 def runtime_versions() -> dict[str, str]:
@@ -333,6 +391,9 @@ def summarize_result(name: str, tune: TuneResult, *, feature_dim: int, train_ids
         "validation_order_sha256": order_digest(val_ids),
         "selected": {"C": tune.best_c, "threshold": tune.best_threshold,
                      "validation_macro_f1": tune.best_score},
+        "selection_reason": tune.reason,
+        "validation_metrics": tune.metrics,
         "grid": tune.grid,
         "convergence_warnings_for_C": tune.convergence_warnings,
+        "fit_seconds_by_C": {str(c): s for c, s in tune.fit_seconds.items()},
     }
