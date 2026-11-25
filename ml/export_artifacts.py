@@ -8,12 +8,17 @@ scikit-learn scores/labels on Validation (export round-trip parity).
     # Fixture bundles for Backend development (#24/#37); NOT research artifacts
     .venv/bin/python -m ml.export_artifacts --fixture --offline
 
-    # Real candidates (#35, after #34 on the audited split)
-    .venv/bin/python -m ml.export_artifacts --manifest M.jsonl --split S.csv --image-root DIR --offline
+    # Real candidates (#35, after #34 on the audited split) -> backend/artifacts/
+    .venv/bin/python -m ml.export_artifacts --manifest M.jsonl --split S.csv --image-root DIR \
+        --expect-selected configs/selected-models.json --offline [--replace]
 
 Bundles are ``status: candidate`` until #49 freezes one. Test is never loaded
-and no predictions are stored. Candidate output defaults to ``backend/artifacts/candidates``;
-fixture output defaults to ``cache/ml-fixture-bundles``.
+and no predictions are stored. Candidate output defaults to ``backend/artifacts``
+(``text_only/``, ``image_only/``, ``multimodal/``, ``label_map.json``, ``export-report.json``);
+fixture output defaults to ``cache/ml-fixture-bundles``. Only those managed entries
+are replaced (other files such as ``metadata.schema.json`` are kept), only with
+``--replace``, all at once after every bundle passed its round-trip check, and a
+fixture export never replaces research bundles.
 """
 
 from __future__ import annotations
@@ -53,10 +58,12 @@ from ml.train_image import build_image_features
 from ml.train_multimodal import fuse_features
 from ml.train_text import build_text_features, model_texts
 
-DEFAULT_OUT = REPO_ROOT / "backend" / "artifacts" / "candidates"
+DEFAULT_OUT = REPO_ROOT / "backend" / "artifacts"
 DEFAULT_FIXTURE_OUT = REPO_ROOT / "cache" / "ml-fixture-bundles"
 LABEL_MAP = {"0": "real", "1": "fake"}  # labels_to_y: fake -> 1
 PARITY_ATOL = 1e-9
+EXPORT_REPORT_FILE = "export-report.json"
+MANAGED_ENTRIES = (*BUNDLE_DIRS.values(), LABEL_MAP_FILE, EXPORT_REPORT_FILE)
 
 
 def _write_npy(root: Path, rel: str, arr: np.ndarray, files: dict) -> None:
@@ -152,22 +159,83 @@ def write_bundle(out_root: Path, configuration: str, tune, *, cfg: dict[str, Any
     return bundle
 
 
+def _existing_entries(out_root: Path) -> list[str]:
+    return [name for name in MANAGED_ENTRIES if (out_root / name).exists()]
+
+
+def _existing_is_research(out_root: Path) -> bool:
+    report = out_root / EXPORT_REPORT_FILE
+    if not report.is_file():
+        return False
+    try:
+        return json.loads(report.read_text(encoding="utf-8")).get("is_fixture") is False
+    except ValueError:
+        return False
+
+
+def _check_target(out_root: Path, *, replace: bool, is_fixture: bool) -> None:
+    existing = _existing_entries(out_root) if out_root.exists() else []
+    if existing and not replace:
+        raise FileExistsError(f"{out_root} already holds {existing}; pass replace=True (--replace) "
+                              "or choose a new export directory")
+    if existing and is_fixture and _existing_is_research(out_root):
+        raise FileExistsError(f"refusing to replace research bundles in {out_root} with fixture bundles")
+
+
+def _install(staged: Path, out_root: Path, backup: Path) -> None:
+    """Move the managed entries of ``staged`` into ``out_root``; roll back on failure."""
+    out_root.mkdir(parents=True, exist_ok=True)
+    backup.mkdir()
+    moved_old: list[str] = []
+    moved_new: list[str] = []
+    try:
+        for name in _existing_entries(out_root):
+            (out_root / name).rename(backup / name)
+            moved_old.append(name)
+        for name in MANAGED_ENTRIES:
+            if (staged / name).exists():
+                (staged / name).rename(out_root / name)
+                moved_new.append(name)
+    except BaseException:
+        for name in moved_new:
+            (out_root / name).rename(staged / name)
+        for name in moved_old:
+            (backup / name).rename(out_root / name)
+        raise
+
+
 def export_all(dataset: Dataset, cfg: dict[str, Any], encoder: ImageEncoder, out_root: Path, *,
-               cache: EmbeddingCache | None = None, inputs: dict[str, str]) -> dict[str, Any]:
+               cache: EmbeddingCache | None = None, inputs: dict[str, str], replace: bool = False,
+               expected_selection: dict[str, Any] | None = None) -> dict[str, Any]:
     if "test" in dataset.splits:
         raise PermissionError("export must not receive Test rows")
-    if out_root.exists():
-        raise FileExistsError(f"choose a new export directory: {out_root}")
+    _check_target(out_root, replace=replace, is_fixture=dataset.is_fixture)
     out_root.parent.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(prefix=".afn-export-", dir=out_root.parent) as temporary:
         staged = Path(temporary) / "bundles"
-        report = _export_and_validate(dataset, cfg, encoder, staged, cache=cache, inputs=inputs)
-        staged.rename(out_root)
+        report = _export_and_validate(dataset, cfg, encoder, staged, cache=cache, inputs=inputs,
+                                      expected_selection=expected_selection)
+        _check_target(out_root, replace=replace, is_fixture=dataset.is_fixture)
+        _install(staged, out_root, Path(temporary) / "previous")
     return report
 
 
+def check_expected_selection(name: str, c: float, threshold: float, inputs: dict[str, str],
+                             expected: dict[str, Any]) -> None:
+    """Fail if the export would not reproduce the #34 choice in configs/selected-models.json."""
+    if expected.get("inputs") != inputs:
+        raise RuntimeError("selected-models.json was chosen on different manifest/split/config hashes")
+    chosen = expected.get("configurations", {}).get(name)
+    if chosen is None:
+        raise RuntimeError(f"{name}: missing from selected-models.json")
+    if float(chosen["C"]) != float(c) or float(chosen["threshold"]) != float(threshold):
+        raise RuntimeError(f"{name}: export selected C={c}, threshold={threshold} but #34 chose "
+                           f"C={chosen['C']}, threshold={chosen['threshold']}")
+
+
 def _export_and_validate(dataset: Dataset, cfg: dict[str, Any], encoder: ImageEncoder, out_root: Path, *,
-                         cache: EmbeddingCache | None, inputs: dict[str, str]) -> dict[str, Any]:
+                         cache: EmbeddingCache | None, inputs: dict[str, str],
+                         expected_selection: dict[str, Any] | None = None) -> dict[str, Any]:
     train, val = dataset.rows("train"), dataset.rows("validation")
     positive = cfg["selection"]["positive_label"]
     y_train, y_val = labels_to_y(train, positive), labels_to_y(val, positive)
@@ -191,6 +259,8 @@ def _export_and_validate(dataset: Dataset, cfg: dict[str, Any], encoder: ImageEn
                               "is_fixture": dataset.is_fixture, "bundles": {}}
     for name, (X_tr, X_va) in blocks.items():
         tune = tune_on_validation(X_tr, y_train, X_va, y_val, cfg)
+        if expected_selection is not None:
+            check_expected_selection(name, tune.best_c, tune.best_threshold, inputs, expected_selection)
         path = write_bundle(
             out_root, name, tune, cfg=cfg, dataset=dataset,
             vectorizer=text.vectorizer if name != "image-only" else None,
@@ -216,7 +286,9 @@ def _export_and_validate(dataset: Dataset, cfg: dict[str, Any], encoder: ImageEn
                                               "atol": PARITY_ATOL, "labels_equal": labels_equal}}
     label_map = {"schema_version": BUNDLE_SCHEMA_VERSION, "classes": LABEL_MAP, "positive_label": "fake"}
     (out_root / LABEL_MAP_FILE).write_text(json.dumps(label_map, indent=2) + "\n", encoding="utf-8")
-    (out_root / "export-report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    if expected_selection is not None:
+        report["selected_models_run_id"] = expected_selection.get("run_id")
+    (out_root / EXPORT_REPORT_FILE).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return report
 
 
@@ -229,14 +301,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--split", type=Path)
     parser.add_argument("--image-root", type=Path, default=None)
     parser.add_argument("--config", type=Path, default=None)
-    parser.add_argument("--out", type=Path, help="new export directory")
+    parser.add_argument("--out", type=Path, help="export directory (default: backend/artifacts for real data)")
+    parser.add_argument("--replace", action="store_true",
+                        help="replace the bundles/label_map/export-report already in --out")
+    parser.add_argument("--expect-selected", type=Path, default=None,
+                        help="#34 configs/selected-models.json; fail if C/threshold or input hashes differ")
     parser.add_argument("--cache-dir", type=Path, default=DEFAULT_EMBEDDING_CACHE)
     parser.add_argument("--hf-cache-dir", type=Path, default=None)
     parser.add_argument("--offline", action="store_true")
     args = parser.parse_args(argv)
     out_root = args.out if args.out is not None else (DEFAULT_FIXTURE_OUT if args.fixture else DEFAULT_OUT)
-    if out_root.exists():
-        parser.error(f"choose a new --out directory: {out_root}")
+    if out_root.exists() and _existing_entries(out_root) and not args.replace:
+        parser.error(f"{out_root} already holds bundles; pass --replace or choose another --out")
+    expected = None
+    if args.expect_selected is not None:
+        expected = json.loads(args.expect_selected.read_text(encoding="utf-8"))
 
     if args.fixture:
         from ml.fixtures import write_synthetic_dataset
@@ -255,7 +334,8 @@ def main(argv: list[str] | None = None) -> int:
     inputs = {"manifest_sha256": dataset.manifest_sha256, "split_sha256": dataset.split_sha256,
               "experiment_config_sha256": sha256_file(config_path)}
     report = export_all(dataset, cfg, encoder, out_root,
-                        cache=EmbeddingCache(args.cache_dir, encoder.dim), inputs=inputs)
+                        cache=EmbeddingCache(args.cache_dir, encoder.dim), inputs=inputs,
+                        replace=args.replace, expected_selection=expected)
     kind = "FIXTURE (not research)" if report["is_fixture"] else "candidate"
     print(f"[{kind}] bundles written to {out_root}")
     for name, b in report["bundles"].items():
