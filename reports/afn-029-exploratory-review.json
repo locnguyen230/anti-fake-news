@@ -1,0 +1,25 @@
+{
+  "approved_for_public_merge": 0,
+  "approved_for_training": 0,
+  "candidate_split_counts": {
+    "test": 33,
+    "train": 116,
+    "validation": 26
+  },
+  "candidate_split_sha256": "1f45fa9b6a98b54d835cc6556ba6d50f0675e0ce0ccb58e4cd70b84a9b9a171d",
+  "code_checks": {
+    "text_preprocess_and_image_hash_decode_passed": 142
+  },
+  "locked_test_unchanged": true,
+  "mode": "exploratory",
+  "review_decisions": {
+    "excluded_reference_page": 8,
+    "pending_explicit_reuse_permission": 2,
+    "pending_resource_rights_and_label_target": 132,
+    "test_metadata_only_locked": 33
+  },
+  "schema_version": "afn-029-exploratory-review-v1",
+  "size_target_required": false,
+  "status": "blocked",
+  "test_payload_opened": false
+}
