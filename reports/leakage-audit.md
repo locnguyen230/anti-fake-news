@@ -54,9 +54,9 @@ hai hồ sơ với cả ba cấu hình.
 
 [Hồ sơ Validation](validation-search.json) · [Giao thức AFN-004](../docs/experiment-protocol.md)
 
-22 ca pytest đạt. Các kiểm thử fixture ghi nhận Logistic Regression chỉ
+24 ca pytest đạt. Các kiểm thử fixture ghi nhận Logistic Regression chỉ
 fit hàng Train, TF-IDF từ chối Validation khi fit, runner từ chối tập có
-Test, và audit phát hiện quan hệ vắt qua split hoặc checksum bị sửa. Hai
+Test, và audit phát hiện quan hệ vắt qua split, metadata thiếu hoặc checksum bị sửa. Hai
 phép thử âm trên bản sao trong bộ nhớ cũng từ chối C bị thay và cờ Test
 đã load. Lượt audit này không huấn luyện lại.
 
@@ -95,3 +95,26 @@ Train/Validation theo giao thức trước freeze. Điều kiện mở Test thu�
 [#18](https://github.com/ngnsusinn/anti-fake-news/issues/18) ·
 [#29](https://github.com/ngnsusinn/anti-fake-news/issues/29) ·
 [#49](https://github.com/ngnsusinn/anti-fake-news/issues/49)
+
+
+Khi DATA cung cấp metadata đã review cho đúng snapshot, QA nhận CSV riêng
+có đúng ba cột `sample_id,publisher,event_id` và SHA-256 do DATA thông báo
+qua kênh bàn giao. CSV chỉ chứa khóa đã chuẩn hóa để nối quan hệ. Mỗi ID
+trong split QA cần có đúng một dòng. Giữ tệp trong vùng riêng của QA.
+
+```powershell
+python -m scripts.audit_split --ml-v2 --release data/private/afn-029-a --image-root cache/afn-029-input/data --experiment-config cache/afn-029-input/configs/experiment.yaml --provenance-csv <csv-da-review> --provenance-sha256 <sha256-tu-DATA>
+```
+
+Lệnh đối chiếu độ phủ ID, checksum và đếm khóa trùng qua nhóm hoặc split
+mà không in ID hay khóa. Với CSV này, khóa thiếu hoặc qua nhóm khiến phép
+audit báo `BLOCKED`. Nếu DATA bàn giao bộ AFN-017/018 đã duyệt với giới
+hạn metadata được giải trình, dùng chế độ AFN-018 và đối chiếu phiên bản
+với lượt Train/Validation liên quan.
+
+`PASS` từ script chỉ xác nhận các phép kiểm dữ liệu. QA và DATA xác nhận
+audit trước lượt Train/Validation làm bằng chứng nghiệm thu. Lượt #34
+đã công bố diễn ra trước audit này, nên cần một lượt Train/Validation được
+ML xác nhận sau sign-off để đáp ứng trình tự của #29. Nếu nhóm hoặc split
+thay đổi, ghi phiên bản và checksum mới trước khi chạy. Test vẫn khóa
+theo #49.

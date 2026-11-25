@@ -142,8 +142,45 @@ def audit_validation_run(data, selected: dict, search: dict, config_path: Path) 
                 raise ValueError(f"ordered {split} membership differs for {name}")
 
 
+def audit_provenance(path: Path, expected_sha: str, assignments: dict[str, tuple[str, str]]) -> dict:
+    """Check reviewed publisher and event keys against QA split metadata."""
+    verified_file(path, expected_sha)
+    fields = ("publisher", "event_id")
+    seen = set()
+    groups = {field: {} for field in fields}
+    missing = dict.fromkeys(fields, 0)
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        reader = csv.DictReader(stream)
+        if reader.fieldnames != ["sample_id", *fields]:
+            raise ValueError("provenance CSV requires sample_id,publisher,event_id")
+        for row in reader:
+            if None in row or None in row.values():
+                raise ValueError("invalid provenance row")
+            sid = row["sample_id"].strip()
+            if sid in seen or sid not in assignments:
+                raise ValueError("duplicate or extra sample in provenance")
+            seen.add(sid)
+            for field in fields:
+                value = normalize(row[field])
+                if value:
+                    groups[field].setdefault(value, set()).add(assignments[sid])
+                else:
+                    missing[field] += 1
+    if seen != assignments.keys():
+        raise ValueError("provenance is missing split assignments")
+    return {
+        "sha256": expected_sha,
+        "samples_checked": len(seen),
+        "missing": missing,
+        "cross_group": {field: sum(len(pairs) > 1 for pairs in values.values())
+                        for field, values in groups.items()},
+        "cross_split": {field: sum(len({split for split, _ in pairs}) > 1 for pairs in values.values())
+                        for field, values in groups.items()},
+    }
+
+
 def audit_ml_v2(release: Path, image_root: Path, selected_path: Path, search_path: Path,
-                config_path: Path) -> dict:
+                config_path: Path, *, provenance: tuple[Path, str] | None = None) -> dict:
     """Cross-check the pinned candidate and grouped QA metadata without loading Test payload."""
     report = json.loads((release / "prepare-report.json").read_bytes())
     if report["version"] != "afn-ml-prepare-v1" or report["seed"] != 42:
@@ -203,15 +240,27 @@ def audit_ml_v2(release: Path, image_root: Path, selected_path: Path, search_pat
             raise ValueError("candidate source and label counts differ from Train/Validation manifest")
         missing_labels[split] = sorted({"fake", "real"} - {label for label, count in breakdown.items() if count})
     audit_validation_run(data, json.loads(selected_path.read_bytes()), json.loads(search_path.read_bytes()), config_path)
-    # The ml-v2 export omits publisher/event identity by design. The edge ledger
-    # cannot rule out relationships that require either of those identifiers.
-    return {"status": "BLOCKED", "checked": "candidate split and recorded Validation run",
+    blockers = []
+    provenance_result = None
+    if provenance is None:
+        blockers.append("publisher/event provenance unavailable in ml-v2; DATA review required")
+    else:
+        path, digest = provenance
+        provenance_result = audit_provenance(path, digest, qa)
+        if any(provenance_result["missing"].values()):
+            blockers.append("publisher/event metadata still has gaps; DATA review required")
+        if any(provenance_result["cross_group"].values()):
+            blockers.append("publisher/event keys cross a group or split; DATA must review grouping")
+    if any(missing_labels.values()):
+        blockers.append("at least one split is missing a reference label")
+    return {"status": "BLOCKED" if blockers else "PASS",
+            "checked": "candidate split and recorded Validation run",
             "dataset_version": "ml-v2", "prepare_version": report["version"],
-            "manifest_sha256": data.manifest_sha256,
-            "split_sha256": data.split_sha256, "sample_counts": dict(counts),
-            "group_counts": {split: len(ids) for split, ids in groups.items()},
+            "manifest_sha256": data.manifest_sha256, "split_sha256": data.split_sha256,
+            "sample_counts": dict(counts), "group_counts": {split: len(ids) for split, ids in groups.items()},
             "relationship_counts": report["edge_counts"], "missing_labels": missing_labels,
-            "blockers": ["publisher/event provenance unavailable in ml-v2; DATA review required"]}
+            "publisher_event_provenance": provenance_result, "blockers": blockers}
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -224,15 +273,20 @@ def main() -> int:
     parser.add_argument("--selected-models", type=Path, default=Path("configs/selected-models.json"))
     parser.add_argument("--validation-search", type=Path, default=Path("reports/validation-search.json"))
     parser.add_argument("--experiment-config", type=Path, default=Path("configs/experiment.yaml"))
+    parser.add_argument("--provenance-csv", type=Path, help="Private publisher/event metadata reviewed by DATA")
+    parser.add_argument("--provenance-sha256", help="Independent SHA-256 from the DATA handoff")
     args = parser.parse_args()
+    if bool(args.provenance_csv) != bool(args.provenance_sha256) or (args.provenance_csv and not args.ml_v2):
+        parser.error("--provenance-csv and --provenance-sha256 must be supplied together with --ml-v2")
     if args.ml_v2 and not args.image_root:
         parser.error("--ml-v2 requires --image-root")
     if not args.ml_v2 and not all((args.grouping, args.summary_sha256, args.audit_sha256)):
         parser.error("AFN-018 audit requires --grouping, --summary-sha256 and --audit-sha256")
     try:
         if args.ml_v2:
+            provenance = (args.provenance_csv, args.provenance_sha256) if args.provenance_csv else None
             result = audit_ml_v2(args.release, args.image_root, args.selected_models,
-                                 args.validation_search, args.experiment_config)
+                                 args.validation_search, args.experiment_config, provenance=provenance)
         else:
             result = audit_release(args.release, args.grouping, summary_sha=args.summary_sha256,
                                    audit_sha=args.audit_sha256)

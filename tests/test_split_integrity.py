@@ -8,7 +8,7 @@ from PIL import Image
 
 from ml.common import load_dataset, sha256_file
 from ml.train_text import fit_text_vectorizer
-from scripts.audit_split import audit_release
+from scripts.audit_split import audit_provenance, audit_release
 from scripts.group_samples import VERSION as GROUPING_VERSION
 
 
@@ -96,3 +96,32 @@ def test_tfidf_rejects_validation_rows_in_fit(handoff, ml_config):
     data = load_dataset(path / "manifest.jsonl", path / "split.csv")
     with pytest.raises(ValueError, match="Train"):
         fit_text_vectorizer(data.rows("train") + data.rows("validation"), ml_config)
+
+
+def test_provenance_checks_reviewed_keys_without_test_payload(tmp_path):
+    csv_path = tmp_path / "provenance.csv"
+    csv_path.write_text("sample_id,publisher,event_id\na,Publisher A,one\nb,publisher a,two\nc,Publisher B,two\n",
+                        encoding="utf-8")
+    assignments = {"a": ("train", "g1"), "b": ("train", "g1"), "c": ("test", "g2")}
+
+    result = audit_provenance(csv_path, sha256_file(csv_path), assignments)
+
+    assert result["samples_checked"] == 3
+    assert result["missing"] == {"publisher": 0, "event_id": 0}
+    assert result["cross_group"] == result["cross_split"] == {"publisher": 0, "event_id": 1}
+
+
+def test_provenance_reports_missing_values_and_checks_digest_and_coverage(tmp_path):
+    csv_path = tmp_path / "provenance.csv"
+    csv_path.write_text("sample_id,publisher,event_id\na,Publisher A,\n", encoding="utf-8")
+    digest = sha256_file(csv_path)
+    assignments = {"a": ("train", "g1")}
+
+    assert audit_provenance(csv_path, digest, assignments)["missing"] == {"publisher": 0, "event_id": 1}
+    with pytest.raises(ValueError, match="missing split assignments"):
+        audit_provenance(csv_path, digest, assignments | {"b": ("test", "g2")})
+    csv_path.write_text("sample_id,publisher,event_id\na,Publisher A,one\na,Publisher B,two\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        audit_provenance(csv_path, digest, assignments)
+    with pytest.raises(ValueError, match="duplicate or extra sample"):
+        audit_provenance(csv_path, sha256_file(csv_path), assignments)
