@@ -110,6 +110,32 @@ async function analyze(popup) {
 
 async function checkPublisherExtraction(page) {
   const { extractArticle } = await import(pathToFileURL(join(extension, 'extract.js')).href);
+  const reutersUrl = 'https://www.reuters.com/lifestyle/duran-duran-guitarist-songwriter-andy-taylor-dies-65-2026-11-25/';
+  const reutersFooter = `
+    <p>The Misinformation Monitor newsletter has a weekly quiz. <a href="/subscribe">Sign up here.</a></p>
+    <p>Reporting by Danielle Broadway; Editing by David Gregorio</p>
+    <p>Thomson Reuters</p>
+    <p>Danielle Broadway covers entertainment and legal proceedings.</p>`;
+  async function readReuters(body) {
+    await page.route(reutersUrl, route => route.fulfill({ contentType: 'text/html', body }), { times: 1 });
+    await page.goto(reutersUrl);
+    return page.evaluate(extractArticle);
+  }
+  const reuters = await readReuters(`<main class="article-module__main__1N9VH"><article>
+    <div data-testid="article-body">
+      <div data-testid="paragraph-0">Andy Taylor played guitar in Duran Duran.</div>
+      <div class="article-body__paragraph__abc"><p>The band paid tribute to its former member.</p></div>
+      ${reutersFooter}
+    </div>
+  </article></main>`);
+  assert.equal(reuters.text, 'Andy Taylor played guitar in Duran Duran.\n\nThe band paid tribute to its former member.');
+  const reutersWithoutBody = await readReuters(`<main class="article-module__main__1N9VH"><article>
+    <div data-testid="article-body"><div style="display:none" data-testid="paragraph-0">Hidden text.</div></div>
+    ${reutersFooter}
+  </article></main>`);
+  assert.equal(reutersWithoutBody.extraction, 'empty');
+  assert.equal(reutersWithoutBody.text, '');
+
   const structures = [
     ['www.reuters.com', '<div class="article-module__main__1N9VH">', '</div>'],
     ['www.reuters.com', '<div class="article-module__main__newHash">', '</div>'],
@@ -155,6 +181,15 @@ async function checkPublisherExtraction(page) {
   assert.equal(generic.title, 'Main title');
   assert.equal(generic.text, 'First main paragraph with meaningful editorial text.\n\nSecond main paragraph with enough editorial content.');
   assert.deepEqual(generic.candidateImages.map(({ url }) => new URL(url).pathname), ['/cover.jpg', '/fallback.jpg']);
+
+  await page.route(genericUrl, route => route.fulfill({
+    contentType: 'text/html',
+    body: `<article class="article-content"><div itemprop="articleBody">
+        <p>Editorial text from the marked body.</p>
+      </div><p>${'Much longer auxiliary material. '.repeat(20)}</p></article>`,
+  }), { times: 1 });
+  await page.goto(genericUrl);
+  assert.equal((await page.evaluate(extractArticle)).text, 'Editorial text from the marked body.');
   console.log('PASS publisher selectors, generic paragraph fallback and cover image priorities');
 }
 

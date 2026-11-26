@@ -30,23 +30,17 @@ export async function readArticle(tab) {
 
 // Chrome serializes this function into the tab's isolated world.
 export function extractArticle() {
-  const EXCLUDED = [
-    'nav', 'aside', 'footer', 'script', 'style', 'template', 'noscript', 'figure figcaption',
-    '[hidden]', '[aria-hidden="true"]', '[role="navigation"]', '[role="complementary"]',
-    '.related-articles', '.related-content', '.related-links', '.read-more', '.advertisement',
-    '.sidebar', '.newsletter', '.ad-slot',
-    '[data-testid^="ad-"]', '[data-testid="related-topics"]', '[data-component="links-block"]',
-  ].join(', ');
-  const BLOCK = 'p, h2, h3, blockquote, [data-testid="paragraph"]';
-  const PROSE = 'p, blockquote, [data-testid="paragraph"]';
-  const MAX_TEXT = 100_002;
-
   const publishers = [
     [['reuters.com'], [
-      '.article-module__main__1N9VH',
-      '[class*="article-module__main__"]',
       '[data-testid="article-body"]',
       '[class*="article-body__content__"]',
+      '[itemprop~="articleBody"]',
+      '[data-testid="Body"]',
+      '.article-module__main__1N9VH',
+      '[class*="article-module__main__"]',
+      'main article',
+      'article',
+      'main',
     ]],
     [['cnn.com'], ['.article__content-container', '.article__content']],
     [['bbc.com', 'bbc.co.uk'], ['main article', '#main-content article', '[data-testid="article"]']],
@@ -58,6 +52,26 @@ export function extractArticle() {
   const hostname = location.hostname.toLowerCase().replace(/\.$/u, '');
   const publisher = publishers.find(([domains]) =>
     domains.some(domain => hostname === domain || hostname.endsWith('.' + domain)));
+  const reuters = publisher?.[0][0] === 'reuters.com';
+  const proseSelectors = ['p', 'blockquote', '[data-testid="paragraph"]', '[data-testid^="paragraph-"]'];
+  const excludedSelectors = [
+    'nav', 'aside', 'footer', 'script', 'style', 'template', 'noscript', 'figcaption',
+    '[hidden]', '[aria-hidden="true"]', '[role="navigation"]', '[role="complementary"]',
+    '.related-articles', '.related-content', '.related-links', '.read-more', '.advertisement',
+    '.sidebar', '.newsletter', '.newsletter-signup', '.ad-slot', '.author-bio', '.byline',
+    '[data-testid^="ad-"]', '[data-testid="related-topics"]', '[data-component="links-block"]',
+  ];
+  if (reuters) {
+    proseSelectors.push('[class*="article-body__paragraph__"]');
+    excludedSelectors.push(
+      '[data-testid*="newsletter" i]', '[class*="newsletter-signup" i]',
+      '[data-testid^="author-" i]', '[class*="author-bio" i]', '[class*="author-card" i]',
+    );
+  }
+  const EXCLUDED = excludedSelectors.join(', ');
+  const PROSE = proseSelectors.join(', ');
+  const BLOCK = PROSE + ', h2, h3';
+  const MAX_TEXT = 100_002;
 
   function visible(element) {
     if (element.closest(EXCLUDED) || !element.getClientRects().length
@@ -99,6 +113,9 @@ export function extractArticle() {
       const linkedLength = [...block.querySelectorAll('a[href]')]
         .reduce((length, link) => length + cleanText(link).length, 0);
       if (linkedLength && linkedLength >= text.length * 0.65) text = '';
+      if (reuters && /\bnewsletter\b/iu.test(text) && /\b(?:sign up|subscribe)(?: here| now)?\.?$/iu.test(text)) {
+        text = '';
+      }
     }
     blockText.set(block, text);
     return text;
@@ -112,6 +129,9 @@ export function extractArticle() {
     for (const block of blocks) {
       const content = readBlock(block);
       if (!content) continue;
+      if (reuters && /^(?:\(?(?:(?:additional )?reporting|writing|editing) by\b|Thomson Reuters\.?$|Our Standards:\s+The Thomson Reuters Trust Principles\b)/iu.test(content)) {
+        break;
+      }
       const part = content.slice(0, MAX_TEXT - textLength);
       paragraphs.push(part);
       if (block.matches(PROSE)) proseLength += part.length;
@@ -138,8 +158,12 @@ export function extractArticle() {
       const result = bestContent(document.querySelectorAll(selector));
       if (result) return result;
     }
+    // Reuters page furniture can be longer than the article. Avoid scoring its footer as a body.
+    if (reuters) return undefined;
+    const structured = bestContent(document.querySelectorAll('[itemprop~="articleBody"]'));
+    if (structured) return structured;
     const marked = bestContent(document.querySelectorAll(
-      '[itemprop~="articleBody"], [data-testid="article-body"], .article-body, .article-content, .entry-content, .post-content',
+      '[data-testid="article-body"], .article-body, .article-content, .entry-content, .post-content',
     ));
     if (marked) return marked;
     const semantic = bestContent(document.querySelectorAll('article'));
