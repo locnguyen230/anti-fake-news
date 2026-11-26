@@ -60,15 +60,8 @@ class ClipImageEncoder:
         }
 
     def encode(self, images: list[Any]) -> np.ndarray:
-        if self.model is None or self.processor is None:
-            raise RuntimeError("Encoder is closed")
         inputs = self.processor(images=images, return_tensors="pt")
         with self._torch.inference_mode():
             out = self.model.get_image_features(pixel_values=inputs["pixel_values"])
         feats = out if isinstance(out, self._torch.Tensor) else out.pooler_output
         return feats.detach().cpu().numpy()
-
-    def close(self) -> None:
-        """Release CPU model/processor references; weights stay in offline cache."""
-        self.model = None
-        self.processor = None

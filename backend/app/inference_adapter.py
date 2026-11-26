@@ -59,13 +59,13 @@ class InferenceAdapter:
 
     @staticmethod
     def _dispose(provider: Predictor | None) -> None:
-        close = getattr(provider, "close", None)
-        if callable(close):
-            try:
+        try:
+            close = getattr(provider, "close", None)
+            if callable(close):
                 close()
-            except Exception:
-                # Cleanup failures must not disclose private exception details.
-                pass
+        except Exception:
+            # Cleanup failures must not disclose private exception details.
+            pass
 
     def mark_error(self) -> None:
         with self._lock:
@@ -80,10 +80,9 @@ class InferenceAdapter:
             self._dispose(provider)
 
     def predict(self, inputs: PredictorInput) -> PredictionResult:
-        # One CPU model call at a time; close/error cannot race an active call.
         with self._lock:
             predictor = self._predictor
-            if not self.ready or predictor is None:
+            if self._state is not ModelState.READY or predictor is None:
                 raise ModelNotReadyError
             try:
                 return PredictionResult.model_validate(predictor.predict(inputs))
@@ -103,7 +102,11 @@ def create_adapter(settings: Settings) -> InferenceAdapter:
         from app.dev.mock_predictor import MockPredictor
 
         adapter.initialize(MockPredictor)
-    elif "model_artifact_path" in settings.model_fields_set or settings.model_artifact_path.exists():
+    elif (
+        settings.environment == "production"
+        or "model_artifact_path" in settings.model_fields_set
+        or settings.model_artifact_path.exists()
+    ):
         def initialize_real() -> Predictor:
             from app.model_loader import load_predictor
 

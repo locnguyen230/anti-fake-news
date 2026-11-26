@@ -1,4 +1,5 @@
 import json
+from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
 
@@ -136,3 +137,41 @@ def test_failed_startup_is_sanitized_and_never_installs_mock(bundle, failure, mo
         assert response.json() == {"error_code": "model_not_ready", "detail": "Model is not ready",
                                    "request_id": request_id}
         assert str(path) not in health.text + response.text and TOKEN not in health.text + response.text
+
+
+@pytest.mark.parametrize("artifact", ["missing", "fixture", "candidate", "wrong-digest", "frozen"])
+def test_production_starts_only_with_the_pinned_frozen_bundle(bundle, artifact):
+    path, _, constructors = bundle
+    metadata_path = path / "metadata.json"
+    metadata = json.loads(metadata_path.read_bytes())
+    if artifact in ("candidate", "wrong-digest", "frozen"):
+        metadata.update(
+            is_fixture=False,
+            evidence_kind="VALIDATION_ONLY",
+            model_id=metadata["model_id"].removesuffix("-fixture"),
+            model_version=metadata["model_version"].removesuffix("-fixture"),
+            status="candidate" if artifact == "candidate" else "frozen",
+        )
+        metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+    digest = sha256(metadata_path.read_bytes()).hexdigest().upper()
+    if artifact == "wrong-digest":
+        digest = "0" * 64
+    if artifact == "missing":
+        metadata_path.unlink()
+    app = create_app(Settings(
+        _env_file=None, environment="production", demo_token=TOKEN,
+        model_artifact_path=path, model_metadata_sha256=digest,
+    ))
+    if artifact != "frozen":
+        with pytest.raises(RuntimeError, match="Production startup failed"):
+            with TestClient(app):
+                pytest.fail("The server must not start with an invalid production artifact")
+        assert constructors == []
+        return
+
+    with TestClient(app) as client:
+        assert client.get("/health").json()["model_ready"] is True
+        response = predict(client, str(uuid4()))
+        assert response.status_code == 200
+        assert response.headers["X-AFN-Inference-Mode"] == "real"
+        assert response.json()["model_version"] == metadata["model_version"]

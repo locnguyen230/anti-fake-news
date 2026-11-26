@@ -1,14 +1,19 @@
 # Anti-fake-news
 
-Local FastAPI service with a multimodal model loader and an explicit dev/test mock.
+FastAPI service and Chromium extension for multimodal article analysis.
 Python **3.13** is the verified shared setup for Backend and ML on Windows x64.
 See [ML environment](docs/ml-environment.md) for shared dependencies and CLIP checks.
 
-Without a ready bundle, `GET /health` reports `model_ready: false` and `POST /predict`
-returns HTTP 503 for valid requests. For synthetic responses during UI development,
-enable the [dev/test mock](docs/dev-mock.md).
+## Production
 
-## Setup and run
+Follow the [Backend deployment guide](docs/backend-setup.md) to prepare the real
+Multimodal bundle approved in AFN-049 and the pinned CLIP cache. Copy `.env.example`
+to `.env`, supply `AFN_DEMO_TOKEN` and the approved `AFN_MODEL_METADATA_SHA256`,
+then run `python -m app` from `backend/`. The production server starts only after
+checking the bundle and warming up the real model. The [Chromium extension](docs/extension-setup.md)
+uses the loopback Backend and the same token.
+
+## Development setup
 
 Verified here: Windows x64, Python **3.13.1**. Reuse an existing working virtual environment.
 This checkout uses `.venv/issue9`; this implementation creates no additional environment.
@@ -21,9 +26,7 @@ From the repository root, PowerShell:
 ```powershell
 py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
-# Optional: copy only when you do not already have a local .env.
-Copy-Item .env.example .env
-# Supply AFN_DEMO_TOKEN privately in .env or this process environment.
+$env:AFN_ENVIRONMENT = 'demo'
 cd backend
 ..\.venv\Scripts\python.exe -m app
 ```
@@ -33,7 +36,7 @@ On Linux/macOS (Python 3.13 installed):
 ```sh
 python3.13 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.txt
-cp -n .env.example .env
+export AFN_ENVIRONMENT=demo
 cd backend
 ../.venv/bin/python -m app
 ```
@@ -55,11 +58,12 @@ Explicit CLI bind options override settings. Keep this local service on loopback
 | --- | --- |
 | AFN_HOST | 127.0.0.1; loopback only |
 | AFN_PORT | 8000; 1–65535 |
-| AFN_ENVIRONMENT | demo; alternatives dev/test |
+| AFN_ENVIRONMENT | production in the deployment template; demo mode when unset |
 | AFN_PREDICTOR_MODE | real; mock requires dev/test |
-| AFN_DEMO_TOKEN | Unset; every prediction gets 401 until configured, including mock |
-| AFN_EXTENSION_ORIGIN | Unset; exact `chrome-extension://<32-char>` origin for CORS (see [local config](docs/local-config.md)) |
-| AFN_MODEL_ARTIFACT_PATH | Multimodal bundle directory, relative to repo or absolute. Defaults to artifacts/model |
+| AFN_DEMO_TOKEN | Required for production startup and for authenticated predictions |
+| AFN_EXTENSION_ORIGIN | Unset; enforcement remains #38 |
+| AFN_MODEL_ARTIFACT_PATH | Multimodal bundle directory, relative to repo or absolute. The deployment template uses backend/artifacts/multimodal |
+| AFN_MODEL_METADATA_SHA256 | Approved metadata.json SHA-256, required in production |
 | AFN_MAX_REQUEST_BYTES | Enforced 12 MiB total body default; configurable above 10 MiB |
 
 POST /predict requires X-Demo-Token, UUID, nonblank text (<=50,000 code points), optional
@@ -91,6 +95,8 @@ See [Extension smoke setup](docs/extension-w1.md) for Playwright and Chromium.
 
 ## Contracts and scope
 
+- [Backend package and offline setup](docs/backend-setup.md)
+- [Data card](docs/data-card.md) and [data rebuild](docs/rebuild-data.md)
 - [API contract v0.2.0](docs/api-contract.md)
 - [Predictor/shared preprocessing](docs/inference-interface.md)
 - [Explicit mock usage and historical AFN-009 evidence](docs/dev-mock.md)

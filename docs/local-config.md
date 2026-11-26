@@ -14,11 +14,12 @@ hơn `.env`. Mọi giá trị không hợp lệ đều chặn khởi động tr�
 | --- | --- | --- |
 | `AFN_HOST` | `127.0.0.1` | Chỉ cho phép loopback (`127.0.0.1`, `::1`, `localhost`). Từ chối `0.0.0.0` hoặc IP mạng LAN. |
 | `AFN_PORT` | `8000` | Số nguyên `1..65535`. |
-| `AFN_ENVIRONMENT` | `demo` | `demo`, `dev` hoặc `test`. `demo` cấm cả `mock` lẫn bundle fixture (`is_fixture: true`). |
+| `AFN_ENVIRONMENT` | `demo` | `production`, `demo`, `dev` hoặc `test`. Chỉ `dev` và `test` cho phép mock hoặc bundle fixture. |
 | `AFN_PREDICTOR_MODE` | `real` | `real` hoặc `mock`. Chế độ `mock` yêu cầu đồng thời `AFN_ENVIRONMENT=dev` hoặc `test`. |
 | `AFN_DEMO_TOKEN` | *(trống)* | Secret cục bộ (`SecretStr`, ẩn khỏi `repr`/JSON). Để trống sẽ từ chối mọi `POST /predict` với `401 invalid_token` (kể cả `mock`). |
 | `AFN_EXTENSION_ORIGIN` | *(trống)* | Khớp chính xác `^chrome-extension://[a-p]{32}$` (không wildcard `*`, không `http`/`https`, không path). Để trống sẽ không cấp CORS cho bất kỳ origin nào. |
 | `AFN_MODEL_ARTIFACT_PATH` | `artifacts/model` | Đường dẫn thư mục bundle Multimodal (tương đối theo gốc repo hoặc tuyệt đối), ẩn khỏi `repr`. Trỏ tới `backend/artifacts/multimodal` khi chạy candidate thật. |
+| `AFN_MODEL_METADATA_SHA256` | *(trống)* | SHA-256 đã được duyệt của `metadata.json`. Bắt buộc ở `production`, cùng với token và bundle trạng thái `frozen`. |
 | `AFN_MAX_REQUEST_BYTES` | `12582912` (12 MiB) | Trần toàn bộ HTTP body (gồm overhead multipart), phải lớn hơn 10 MiB (`IMAGE_MAX_BYTES`). |
 | `HF_HOME` | `cache/huggingface` | Biến môi trường Hugging Face (ngoài `AFN_`). Trỏ tới thư mục cha của `hub/` chứa cache CLIP đã ghim. |
 | `HF_HUB_OFFLINE` | *(khuyến nghị `1` ở demo)* | `ClipImageEncoder` ở Backend luôn gọi `offline=True` (`local_files_only=True`); đặt `HF_HUB_OFFLINE=1` tăng cường bảo vệ không gọi mạng. |
@@ -60,8 +61,9 @@ Quá trình khởi động chạy qua FastAPI `lifespan` (`backend/app/main.py` 
    - `ready` (`model_ready: true`): nạp, kiểm tra và warm-up hoàn tất.
    - `error` (`model_ready: false`): startup thất bại hoặc lỗi runtime trong lúc suy luận.
 6. **Chống pipeline nạp dở và không fallback mock:**
-   - Nếu bất kỳ bước nào trong quá trình nạp/warm-up lỗi, `load_predictor` gọi `close()` giải phóng encoder/predictor vừa tạo; `InferenceAdapter` ghi nhận `ModelState.ERROR`, không gán provider và **không bao giờ** chuyển sang `MockPredictor`.
+   - Khi kiểm tra encoder hoặc warm-up thất bại, `load_predictor` đóng predictor vừa tạo. `InferenceAdapter` ghi nhận `ModelState.ERROR` và giữ chế độ suy luận đã cấu hình.
    - Mọi `POST /predict` hợp lệ khi adapter không ở trạng thái `ready` đều nhận `503 model_not_ready` (với `request_id` đã xác thực).
+   - Ở `production`, adapter phải sẵn sàng thì dịch vụ mới khởi động thành công.
    - Khi shutdown, `lifespan` gọi `adapter.close()` trong threadpool để giải phóng tham chiếu `CLIPModel`/`CLIPImageProcessor` và bundle.
    - Các lời gọi CPU suy luận được tuần tự hóa qua `RLock` trong `InferenceAdapter`, tránh race giữa request đồng thời và đóng/báo lỗi.
    - Muốn phục hồi sau `error` phải khắc phục artifact/cache và khởi động lại dịch vụ.

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
-from pathlib import Path
 
 from fastapi import Request
 from pydantic import Field
@@ -35,21 +34,8 @@ class Predictor(Protocol):
 
 class BundlePredictor:
     def __init__(self, bundle: ModelBundle, encoder: ImageEncoder) -> None:
-        self._bundle = bundle
-        self._encoder = encoder
-
-    def predict(self, inputs: PredictorInput) -> PredictionResult:
-        if self._encoder is None or self._bundle is None:
-            raise ModelNotReadyError
-        try:
-            with load_image_rgb(inputs.image_bytes) as image:
-                embedding = self._encoder.encode([image])
-            if embedding.dtype.name != EMBEDDING_DTYPE_NAME:
-                raise ValueError("encoder returned an unexpected dtype")
-            result = self._bundle.predict(inputs.title, inputs.text, embedding)
-        except PreprocessingError:
-            raise InputError(inputs.request_id) from None
-        return PredictionResult.model_validate(result, from_attributes=True)
+        self._bundle: ModelBundle | None = bundle
+        self._encoder: ImageEncoder | None = encoder
 
     def close(self) -> None:
         encoder, self._encoder = self._encoder, None
@@ -58,14 +44,19 @@ class BundlePredictor:
         if callable(close):
             close()
 
-
-def load_for_parity(bundle_dir: Path) -> BundlePredictor:
-    """AFN-036 factory hook; same loader/warm-up as HTTP, no .env or training."""
-    from app.config import Settings
-    from app.model_loader import load_predictor
-
-    return load_predictor(Settings(_env_file=None, environment="test", predictor_mode="real",
-                                   model_artifact_path=bundle_dir))
+    def predict(self, inputs: PredictorInput) -> PredictionResult:
+        bundle, encoder = self._bundle, self._encoder
+        if bundle is None or encoder is None:
+            raise ModelNotReadyError
+        try:
+            with load_image_rgb(inputs.image_bytes) as image:
+                embedding = encoder.encode([image])
+            if embedding.dtype.name != EMBEDDING_DTYPE_NAME:
+                raise ValueError("encoder returned an unexpected dtype")
+            result = bundle.predict(inputs.title, inputs.text, embedding)
+        except PreprocessingError:
+            raise InputError(inputs.request_id) from None
+        return PredictionResult.model_validate(result, from_attributes=True)
 
 
 def get_predictor(request: Request) -> Predictor:
