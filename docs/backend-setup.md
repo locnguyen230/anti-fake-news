@@ -82,6 +82,8 @@ Sao chép `.env.example` thành `.env` tại gốc gói. Giữ
 `AFN_HOST=127.0.0.1`. Điền SHA-256 đã duyệt từ AFN-049 vào
 `AFN_MODEL_METADATA_SHA256`, tạo token riêng cho Backend và nhập cùng token
 trong Extension. Có thể đặt biến môi trường thay cho sửa file.
+Đặt `AFN_EXTENSION_ORIGIN=chrome-extension://<id>` theo ID của bản Extension
+đã cài trong `chrome://extensions` để Backend cho phép request từ Extension.
 Từ thư mục gốc đã giải nén:
 
 ```powershell

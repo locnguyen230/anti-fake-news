@@ -12,6 +12,7 @@ RUNTIME_FILES = (
     "backend/app/__main__.py",
     "backend/app/clip_encoder.py",
     "backend/app/config.py",
+    "backend/app/cors.py",
     "backend/app/errors.py",
     "backend/app/image_validation.py",
     "backend/app/inference_adapter.py",
