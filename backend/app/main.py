@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.config import Settings
+from app.cors import LocalCORSMiddleware
 from app.errors import InputError
 from app.validation import RequestLimitsMiddleware, error_response, validate_request
 from app.inference_adapter import InferenceAdapter, create_adapter, get_inference_adapter
@@ -54,13 +55,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             yield
         finally:
-            adapter.close()
+            await run_in_threadpool(adapter.close)
             app.state.predictor = None
             app.state.settings = None
 
     app = FastAPI(title="Anti-fake-news local foundation", version=CONTRACT_VERSION,
                   lifespan=lifespan)
     app.add_middleware(RequestLimitsMiddleware)
+    app.add_middleware(LocalCORSMiddleware)
 
     @app.exception_handler(ModelNotReadyError)
     async def model_not_ready(request: Request, exc: ModelNotReadyError) -> JSONResponse:
@@ -109,7 +111,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         except Exception:
             # Also covers explicitly overridden providers; never retain error text.
-            adapter.mark_error()
+            await run_in_threadpool(adapter.mark_error)
             raise ModelNotReadyError from None
         if not adapter.ready:
             raise ModelNotReadyError

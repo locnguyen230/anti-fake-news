@@ -131,7 +131,8 @@ try {
 ```
 
 Timeout do client cấu hình, chờ Extension review; mục tiêu 10 giây không phải timeout bắt buộc.
-Abort phía client không đảm bảo hủy compute phía server. CORS/browser integration thuộc #38;
-chưa chứng minh ví dụ cross-origin chạy được. Chỉ phục vụ loopback; không ghi secret vào URL/log/repo.
-CORS không thay auth. Các khác biệt tài liệu nền và review còn thiếu ghi trong
-[báo cáo](implementation-issues-22-23.md).
+Abort phía client không đảm bảo hủy compute phía server. CORS chỉ cấp cho origin
+`AFN_EXTENSION_ORIGIN` dạng `chrome-extension://<32 ký tự>` (xem [cấu hình local](local-config.md));
+chỉ phục vụ loopback, không ghi secret vào URL/log/repo. CORS là chính sách trình duyệt,
+không chặn HTTP client ngoài trình duyệt và không thay xác thực `X-Demo-Token`. Các khác biệt
+tài liệu nền và review còn thiếu ghi trong [báo cáo](implementation-issues-22-23.md).

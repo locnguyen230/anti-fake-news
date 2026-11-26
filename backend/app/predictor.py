@@ -34,16 +34,26 @@ class Predictor(Protocol):
 
 class BundlePredictor:
     def __init__(self, bundle: ModelBundle, encoder: ImageEncoder) -> None:
-        self._bundle = bundle
-        self._encoder = encoder
+        self._bundle: ModelBundle | None = bundle
+        self._encoder: ImageEncoder | None = encoder
+
+    def close(self) -> None:
+        encoder, self._encoder = self._encoder, None
+        self._bundle = None
+        close = getattr(encoder, "close", None)
+        if callable(close):
+            close()
 
     def predict(self, inputs: PredictorInput) -> PredictionResult:
+        bundle, encoder = self._bundle, self._encoder
+        if bundle is None or encoder is None:
+            raise ModelNotReadyError
         try:
             with load_image_rgb(inputs.image_bytes) as image:
-                embedding = self._encoder.encode([image])
+                embedding = encoder.encode([image])
             if embedding.dtype.name != EMBEDDING_DTYPE_NAME:
                 raise ValueError("encoder returned an unexpected dtype")
-            result = self._bundle.predict(inputs.title, inputs.text, embedding)
+            result = bundle.predict(inputs.title, inputs.text, embedding)
         except PreprocessingError:
             raise InputError(inputs.request_id) from None
         return PredictionResult.model_validate(result, from_attributes=True)
