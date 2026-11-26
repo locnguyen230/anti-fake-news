@@ -72,9 +72,10 @@ Quá trình khởi động chạy qua FastAPI `lifespan` (`backend/app/main.py` 
 ## 4. Vệ sinh log và thông điệp lỗi
 
 - Launcher `python -m app` (`backend/app/__main__.py`) chạy Uvicorn với `access_log=False`; khi cấu hình sai, chỉ in thông báo chung `"Invalid AFN configuration; check .env and environment values."` (ẩn giá trị đầu vào nhờ `hide_input_in_errors=True`).
+- `SanitizedLifespanMiddleware` thay message lỗi startup/shutdown bằng thông báo cố định trước khi Uvicorn ghi log; startup lỗi vẫn không nhận request và launcher thoát thất bại. Không bật traceback để chẩn đoán artifact.
 - `GET /health` và mọi phản hồi lỗi `400/401/413/503` chỉ trả schema cố định (`HealthResponse`, `ErrorResponse`) kèm header `Cache-Control: no-store`.
 - Không ghi hoặc trả lại nội dung bài báo, byte ảnh, tên tệp upload, `AFN_DEMO_TOKEN`, đường dẫn máy cục bộ, thông điệp ngoại lệ nội bộ hay stack trace.
-- `.env`, `backend/artifacts/multimodal/`, `cache/` và `data/private/` nằm trong `.gitignore`.
+- Không đưa `.env`, artifact, cache hoặc dữ liệu private vào gói bàn giao. Kiểm tra danh sách tệp trước khi stage; checkout này bảo vệ dữ liệu/model qua Git local excludes.
 
 ## 5. Cách chạy cục bộ (Windows x64 / Python 3.13)
 

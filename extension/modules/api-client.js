@@ -52,7 +52,7 @@ export function createApiClient(fetchTransport = globalThis.fetch) {
       });
       if (timedOut) throw new ApiError('timeout');
       if (signal?.aborted) throw new ApiError('aborted');
-      return { data, mode: response.headers.get('X-AFN-Inference-Mode') };
+      return { data, headers: response.headers };
     } catch (error) {
       if (timedOut) throw new ApiError('timeout');
       if (signal?.aborted) throw new ApiError('aborted');
@@ -69,7 +69,7 @@ export function createApiClient(fetchTransport = globalThis.fetch) {
       const response = await request(config, '/health', {}, signal);
       if (response.data?.service_status !== 'ok' || typeof response.data.model_ready !== 'boolean'
           || typeof response.data.contract_version !== 'string') throw new ApiError('invalid-response');
-      return response;
+      return { data: response.data, mode: response.headers.get('X-AFN-Inference-Mode') };
     },
 
     async predict(config, draft, requestId, signal) {
@@ -82,7 +82,14 @@ export function createApiClient(fetchTransport = globalThis.fetch) {
         method: 'POST', headers: { 'X-Demo-Token': config.demoToken.trim() }, body,
       }, signal);
       if (!isPrediction(response.data)) throw new ApiError('invalid-response');
-      return response;
+      const { data, headers } = response;
+      const thresholdHeader = headers.get('X-AFN-Decision-Threshold');
+      const threshold = thresholdHeader?.trim() ? Number(thresholdHeader) : NaN;
+      return {
+        data,
+        mode: headers.get('X-AFN-Inference-Mode'),
+        threshold: Number.isFinite(threshold) && threshold >= 0 && threshold <= 1 ? threshold : null,
+      };
     },
   };
 }

@@ -1,5 +1,5 @@
 {
-  "run_id": "20261125T145232Z",
+  "run_id": "20261126T024649Z",
   "kind": "train_validation_tuning",
   "evidence_kind": "VALIDATION_ONLY",
   "test_split": {
@@ -9,11 +9,11 @@
   "inputs": {
     "manifest_sha256": "a42af272426dc73019dd1f7b010de9feb1f3fb67f8b2740c672f6a34a237f44a",
     "split_sha256": "81058045c8397ed9cce8645267466e79a2fc346606865e05ade9b303b77b9c1f",
-    "experiment_config_sha256": "11dab478d6838c5872a2446d01d950382a51c4265298319d03cdb472f3aa29a8"
+    "experiment_config_sha256": "dd4da7bde49905e06d6e89dc9e1a7ff3518bc2cabde424d798bb85d19e805298"
   },
   "experiment_config": {
     "version": 1,
-    "status": "proposed",
+    "status": "locked",
     "seed": 42,
     "input_language": "en",
     "configurations": [
@@ -298,11 +298,11 @@
       ],
       "convergence_warnings_for_C": [],
       "fit_seconds_by_C": {
-        "0.01": 0.00363,
-        "0.1": 0.001748,
-        "1.0": 0.001869,
-        "10.0": 0.002939,
-        "100.0": 0.003569
+        "0.01": 0.003867,
+        "0.1": 0.001617,
+        "1.0": 0.002017,
+        "10.0": 0.002679,
+        "100.0": 0.003493
       },
       "text": {
         "vocabulary_size": 5000,
@@ -310,9 +310,9 @@
         "truncated_validation": 1
       },
       "timing_seconds": {
-        "tune": 0.184839,
+        "tune": 0.165291,
         "shared_features": {
-          "text": 0.908334
+          "text": 0.894924
         }
       }
     },
@@ -508,11 +508,11 @@
       ],
       "convergence_warnings_for_C": [],
       "fit_seconds_by_C": {
-        "0.01": 0.002582,
-        "0.1": 0.002988,
-        "1.0": 0.003303,
-        "10.0": 0.00606,
-        "100.0": 0.01055
+        "0.01": 0.002247,
+        "0.1": 0.002864,
+        "1.0": 0.003209,
+        "10.0": 0.005481,
+        "100.0": 0.009583
       },
       "image": {
         "encoder": {
@@ -527,7 +527,7 @@
           "cache_hits": 153,
           "encoded": 0,
           "batch_size": 16,
-          "total_seconds": 0.183,
+          "total_seconds": 0.241,
           "encode_seconds": 0.0,
           "encode_ms_per_image": null
         },
@@ -536,15 +536,15 @@
           "cache_hits": 32,
           "encoded": 0,
           "batch_size": 16,
-          "total_seconds": 0.041,
+          "total_seconds": 0.027,
           "encode_seconds": 0.0,
           "encode_ms_per_image": null
         }
       },
       "timing_seconds": {
-        "tune": 0.049216,
+        "tune": 0.044694,
         "shared_features": {
-          "image": 0.224506
+          "image": 0.268706
         }
       }
     },
@@ -740,11 +740,11 @@
       ],
       "convergence_warnings_for_C": [],
       "fit_seconds_by_C": {
-        "0.01": 0.003762,
-        "0.1": 0.004329,
-        "1.0": 0.005459,
-        "10.0": 0.008231,
-        "100.0": 0.010744
+        "0.01": 0.003586,
+        "0.1": 0.004172,
+        "1.0": 0.004731,
+        "10.0": 0.007948,
+        "100.0": 0.010085
       },
       "fusion": {
         "order": [
@@ -756,10 +756,10 @@
         "image_dim": 512
       },
       "timing_seconds": {
-        "tune": 0.06082,
+        "tune": 0.054351,
         "shared_features": {
-          "text": 0.908334,
-          "image": 0.224506
+          "text": 0.894924,
+          "image": 0.268706
         }
       }
     }

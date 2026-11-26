@@ -1,6 +1,7 @@
 """AFN-049 freeze record: collect, sign, verify (synthetic fixture; FakeImageEncoder is a test double)."""
 
 import json
+import re
 import subprocess
 from shutil import copyfile
 
@@ -21,7 +22,7 @@ def _git(root, *args):
 
 
 def _write_config(root, status):
-    text = DEFAULT_EXPERIMENT_CONFIG.read_text(encoding="utf-8").replace("status: proposed", f"status: {status}")
+    text = re.sub(r"(?m)^status: \w+$", f"status: {status}", DEFAULT_EXPERIMENT_CONFIG.read_text(encoding="utf-8"))
     path = root / "configs" / "experiment.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")

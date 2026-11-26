@@ -18,7 +18,7 @@ class LocalCORSMiddleware:
         cors = CORSMiddleware(
             self.app, allow_origins=[origin] if origin else [],
             allow_methods=["GET", "POST"], allow_headers=["X-Demo-Token", "Content-Type"],
-            expose_headers=["X-AFN-Inference-Mode", "X-AFN-Model-State"],
+            expose_headers=["X-AFN-Inference-Mode", "X-AFN-Model-State", "X-AFN-Decision-Threshold"],
             allow_credentials=False, max_age=600,
         )
         await cors(scope, receive, send)

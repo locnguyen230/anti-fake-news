@@ -1,82 +1,64 @@
 # Biên bản trước khi mở Test · AFN-049
 
-**26/11/2026 · BẢN NHÁP, CHƯA KÝ. Test vẫn khóa.** Biên bản này kèm hồ sơ
-[`release/model-freeze.json`](../release/model-freeze.json) (schema `afn-model-freeze-v1`).
-#50 chỉ chạy khi hồ sơ có chữ ký của cả ML và QA, và `ml.freeze verify` đối chiếu
-thành công cả hash manifest Train/Validation và split CSV đã ẩn ID Test. Chạy lại
-`collect` sau khi merge để hồ sơ nháp ghi nhận hash của mã mới. Bản nháp không cho phép chạy Test.
+**26/11/2026 · ML đã ký, chờ QA ký. Test vẫn khóa.** Biên bản này đi kèm hồ sơ
+[`release/model-freeze.json`](../release/model-freeze.json) (schema `afn-model-freeze-v1`,
+`record_sha256` `7afd69de…`). #50 chỉ chạy khi hồ sơ có đủ chữ ký ML và QA, và
+`ml.freeze verify` khớp với các file trên đĩa.
 
-## Hồ sơ freeze ghi gì
+## Bản khóa
 
-| Mục | Giá trị trong bản nháp hiện tại |
+| Mục | Giá trị |
 | --- | --- |
-| Dữ liệu | Manifest Train/Val `a42af272…`, split ẩn ID Test `81058045…`, 153 Train / 32 Val / 33 Test khóa |
-| Protocol | `configs/experiment.yaml` `11dab478…`, trạng thái `proposed` |
-| Lựa chọn | `configs/selected-models.json`, run `20261125T145232Z`, chọn trên Validation |
-| Text-only | `text-only-20261125-275718e3163b`, C = 10, ngưỡng 0,60 |
-| Image-only | `image-only-20261125-cd863cbaabf5`, C = 10, ngưỡng 0,30 |
-| Multimodal | `multimodal-20261125-105d5f14e79a`, C = 100, ngưỡng 0,70 |
-| Artifact | SHA-256 của `metadata.json` và từng mảng `.npy`/vocabulary của ba bundle |
-| Mã | SHA-256 của các file quyết định đặc trưng, điểm và lệnh Test, kèm commit git |
-| Nhãn | `{"0": "real", "1": "fake"}`, lớp dương `fake`, so sánh `>=` ngưỡng |
+| Dữ liệu | Split `ml-v2`, nhóm chọn ngày 26/11/2026. Manifest Train/Val `a42af272…`, split đã ẩn ID Test `81058045…`. 153 Train / 32 Val / 33 Test khóa |
+| Protocol | `configs/experiment.yaml` `dd4da7bd…`, `status: locked` (#111) |
+| Lựa chọn | `configs/selected-models.json`, run `20261126T024649Z`, chọn trên Validation |
+| Text-only | `text-only-20261126-275718e3163b`, C = 10, ngưỡng 0,60, Macro-F1 Val 0,686 |
+| Image-only | `image-only-20261126-cd863cbaabf5`, C = 10, ngưỡng 0,30, Macro-F1 Val 0,536 |
+| Multimodal | `multimodal-20261126-105d5f14e79a`, C = 100, ngưỡng 0,70, Macro-F1 Val 0,624 |
+| `metadata.json` Multimodal | `6cd766a982015fb661f7eee8a5aa1317f05efc562769f8a13ba054e572fc09d5` |
+| Nhãn | `{"0": "real", "1": "fake"}`, lớp dương `fake`, dự đoán `fake` khi điểm `>=` ngưỡng |
+| Lệnh Test | `ml.evaluate_test`, nằm trong snapshot mã của hồ sơ |
 
-`collect` từ chối nếu hash trong bundle, trong `selected-models.json` và trên đĩa không
-khớp nhau. Lệnh chỉ đọc gói Train/Validation. Chữ ký ký lên hash chuẩn của toàn bộ hồ
-sơ: sửa bất kỳ trường nào sau khi ký sẽ làm cả hai chữ ký mất hiệu lực.
+Khóa protocol làm đổi hash config, nên ML đã chạy lại Train/Val. Lượt `20261126T024649Z`
+cho cùng C, ngưỡng và Macro-F1 với lượt `20261125T145232Z`. Mảng trọng số của bundle
+cũng không đổi: phần hash trong model version giữ nguyên, chỉ ngày thay đổi.
 
-## Blocker do script tự phát hiện
+## Điều kiện và bằng chứng
 
-| Blocker | Owner | Cách gỡ |
-| --- | --- | --- |
-| Protocol còn `proposed` | Integration `fulord26` (#4) | Đổi `status: locked` qua PR. Hash config sẽ đổi, nên ML chạy lại Train/Val và export (xem bên dưới). |
-| Mã chưa commit | ML `0xDa1Vu` | Tự hết khi PR này và PR #50 merge. |
-| Chưa có lệnh Test cuối (`ml/evaluate_test.py`) | ML `0xDa1Vu` (#50) | Lệnh phải merge trước khi freeze để mã đánh giá nằm trong snapshot. |
+- [x] **Protocol đã khóa.** #111. Giá trị không đổi so với bản `proposed`, chỉ đổi trạng thái.
+- [x] **Split.** Nhóm chọn `ml-v2`. Kiểm tra của QA đều đạt: hash khớp, không có nhóm nào
+      nằm ở nhiều split, không trùng ảnh/body/tiêu đề giữa Train và Val, Test đủ hai lớp
+      ([audit #29](leakage-audit.md)).
+      **Giới hạn đã biết:** 21 hostname publisher (theo bản đề xuất của QA) xuất hiện ở nhiều
+      split, và chưa có event ID. Kết quả Test có thể cao hơn thực tế vì mô hình đã gặp cùng
+      nguồn báo. Báo cáo #50/#51 phải ghi rõ giới hạn này.
+- [x] **Chưa dùng Test để chọn cấu hình.** `selected-models.json` ghi `test_split.loaded: false`.
+      Audit #29 đã xếp lại độc lập lưới tham số và khớp với C/ngưỡng đã chọn.
+- [x] **Parity.** Chạy trên 32 mẫu Validation với bundle cuối: ba cấu hình đều PASS, max |Δ| = 0,
+      cả với predictor tham chiếu (`ml.inference_parity`) lẫn `BundlePredictor` của Backend (#37).
+- [x] **Không refit Train+Val.** `refit_on_train_and_validation: false`. Mọi bundle ghi `fit_split: train`.
+- [x] **Mã đã commit.** Hồ sơ không còn blocker.
+- [ ] **Artifact demo trỏ đúng bản khóa.** Backend đặt `AFN_MODEL_METADATA_SHA256` bằng hash
+      Multimodal ở bảng trên và `AFN_ALLOW_CANDIDATE_MODEL=true`. Bundle giữ `status: candidate`
+      vì đổi sang `frozen` sẽ làm đổi hash đã ký. Backend dùng `ml.freeze verify` để kiểm bản
+      bundle nhận được.
+- [ ] **QA ký.** QA kiểm các mục trên trên cùng hồ sơ rồi ký.
 
-## Điều kiện cần người xác nhận
+## Bàn giao bundle
 
-QA ký nghĩa là đã kiểm từng dòng dưới đây trên cùng hồ sơ.
+Theo [hướng dẫn artifact](../backend/artifacts/README.md), bundle không nằm trong git. ML gửi
+nguyên thư mục `backend/artifacts/` (khoảng 360 KB). Người nhận đặt thư mục vào đúng vị trí
+rồi chạy `verify`. Lệnh trả mã 0 nghĩa là bundle trùng từng byte với bản khóa.
 
-- [ ] **Split được chấp nhận.** [Audit #29](leakage-audit.md) đang `BLOCKED`: 21 hostname
-      publisher đề xuất xuất hiện ở nhiều split và còn 2 cặp sự kiện ứng viên qua split.
-      DATA `locnguyen230` (#31) và QA `dangnguyen0512` chốt một trong hai hướng:
-      giữ `ml-v2` và ghi rõ giới hạn, hoặc dùng bản nối hostname (116/26/33, giữ nguyên
-      33 ID Test). Nếu đổi split thì ML chạy lại toàn bộ Train/Val, export và parity.
-- [ ] **Chưa dùng Test để chọn cấu hình.** `selected-models.json` ghi `test_split.loaded: false`.
-      Audit #29 đã xếp lại độc lập 75 điểm lưới và khớp C/ngưỡng.
-- [ ] **Parity.** [Báo cáo parity](inference-parity.md) mục 3b: ba cấu hình PASS trên 32 mẫu
-      Validation, max |Δ| = 0. Backend/QA xác nhận cùng bundle chạy qua predictor dịch vụ
-      (P0 trong [gate tuần 3](week-3-gate.md)).
-- [ ] **Test đủ lớp và nhóm.** QA xác nhận từ số đếm tổng hợp rằng Test có cả `fake` và
-      `real`, không có nhóm nào nằm ở nhiều split.
-- [ ] **Artifact demo trỏ đúng bản khóa.** Backend đặt `MODEL_ARTIFACT_PATH` tới
-      `backend/artifacts/multimodal` và `MODEL_METADATA_SHA256` bằng `metadata_sha256` của
-      Multimodal trong hồ sơ.
-- [ ] **Trạng thái `frozen` cho bundle.** Backend production chỉ nhận bundle có
-      `status: frozen`. Đổi trạng thái sẽ làm đổi hash `metadata.json`, nên ML và BACKEND cần
-      thống nhất đổi trước lần `collect` cuối. Hồ sơ sẽ ghim đúng bản demo dùng.
-- [ ] **Không refit Train+Val.** Protocol ghi `refit_on_train_and_validation: false` và mọi
-      bundle ghi `fit_split: train`.
-
-## Trình tự ký
-
-1. Integration khóa protocol. DATA/QA chốt split.
-2. ML chạy lại Train/Val trên đúng config và split đã chốt, ghi `selected-models.json` mới,
-   rồi export với `--expect-selected` và chạy parity.
-3. ML chạy `collect` (lệnh dưới). Hồ sơ không còn blocker, commit qua PR.
-4. ML ký, QA kiểm danh sách trên rồi ký. Hai chữ ký phải cùng `record_sha256`.
-5. #50 chạy `verify` rồi chấm Test đúng một lần.
+## Lệnh
 
 ```sh
-H=data/private/ml-v2/train-validation
-.venv/bin/python -m ml.freeze collect --bundle-root backend/artifacts \
-    --manifest $H/manifest.jsonl --split $H/split.csv --out release/model-freeze.json --replace
-.venv/bin/python -m ml.freeze verify --bundle-root backend/artifacts \
-    --manifest "$H/manifest.jsonl" --split "$H/split.csv" --allow-unsigned
-.venv/bin/python -m ml.freeze sign --role ml --by <github-login>
+# QA: kiểm hash trước khi ký (hồ sơ chưa ký thì dùng --allow-unsigned)
+.venv/bin/python -m ml.freeze verify --bundle-root backend/artifacts --allow-unsigned
 .venv/bin/python -m ml.freeze sign --role qa --by <github-login> --note "<bằng chứng đã kiểm>"
-.venv/bin/python -m ml.freeze verify --bundle-root backend/artifacts \
-    --manifest "$H/manifest.jsonl" --split "$H/split.csv"
+.venv/bin/python -m ml.freeze verify --bundle-root backend/artifacts   # phải trả mã 0
 ```
 
-`collect` trả mã 2 khi còn blocker. `sign` từ chối khi còn blocker hoặc khi hai người ký hai
-phiên bản khác nhau. `verify` trả mã 1 nếu thiếu chữ ký hoặc có file đã đổi sau freeze.
+Chữ ký QA chỉ thêm vào khối `signoffs` nên không làm đổi `record_sha256`. Nếu QA cần sửa bất
+kỳ trường nào khác, ML phải chạy lại `collect` và cả hai ký lại. Sau khi hồ sơ có đủ hai chữ
+ký và đã merge, ML chạy #50 đúng một lần.

@@ -1,6 +1,6 @@
 # AFN-035: ba gói ứng viên thật (dataset ml-v2)
 
-Ngày xuất: 25/11/2026, macOS M1, CPU, CLIP ViT-B/32 đã ghim. Dựa trên kết quả #34
+Ngày xuất: 26/11/2026 (xuất lại sau khi khóa protocol; lần đầu 25/11), macOS M1, CPU, CLIP ViT-B/32 đã ghim. Dựa trên kết quả #34
 ([ml-train-validation.md](ml-train-validation.md)): fit trên Train (153 mẫu), chọn trên Validation (32 mẫu).
 **Test không được nạp**, gói không lưu dự đoán nào.
 
@@ -15,20 +15,22 @@ Các file này được gitignore, không commit. Bộ xuất chỉ thay những
 
 | Gói | model_version | Số chiều | C | Ngưỡng | Macro-F1 Val | Round-trip max\|Δ\| | Nhãn khớp |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| text-only | `text-only-20261125-275718e3163b` | 5000 | 10 | 0,60 | 0,686 | 0 | có |
-| image-only | `image-only-20261125-cd863cbaabf5` | 512 | 10 | 0,30 | 0,536 | 5e-16 | có |
-| multimodal | `multimodal-20261125-105d5f14e79a` | 5512 | 100 | 0,70 | 0,624 | 0 | có |
+| text-only | `text-only-20261126-275718e3163b` | 5000 | 10 | 0,60 | 0,686 | 0 | có |
+| image-only | `image-only-20261126-cd863cbaabf5` | 512 | 10 | 0,30 | 0,536 | 5e-16 | có |
+| multimodal | `multimodal-20261126-105d5f14e79a` | 5512 | 100 | 0,70 | 0,624 | 0 | có |
 
 Round-trip: bộ xuất nạp lại từng gói bằng `app.model_bundle.load_bundle` và so điểm/nhãn với scikit-learn
 trên Validation (atol 1e-9).
 
 **Đối chiếu với #34:** lần xuất chạy với `--expect-selected configs/selected-models.json`. Nếu C hoặc ngưỡng
 của bất kỳ cấu hình nào khác lựa chọn của #34, hoặc hash manifest/split/config khác, bộ xuất dừng
-và không thay gói cũ. Lần xuất này khớp với run `20261125T145232Z` (`selected_models_run_id` trong `export-report.json`).
+và không thay gói cũ. Lần xuất này khớp với run `20261126T024649Z` (`selected_models_run_id` trong `export-report.json`).
 
 ## Bàn giao Backend (#24/#37)
 
-- Gói nào được dùng cho demo sẽ quyết định ở #49. Theo thiết kế, `POST /predict` dùng Multimodal.
+- Demo dùng gói Multimodal đã ghim trong [hồ sơ freeze #49](../release/model-freeze.json): `metadata.json`
+  SHA-256 `6cd766a982015fb661f7eee8a5aa1317f05efc562769f8a13ba054e572fc09d5`. Phần hash trong `model_version`
+  giống bản 25/11, nghĩa là trọng số không đổi; chỉ ngày và hash config khác.
 - Backend nạp bằng `app.model_bundle.load_bundle("backend/artifacts/multimodal")` (xem [docs/model-bundle.md](../docs/model-bundle.md)).
 - Gói không nằm trong git. Để tạo lại trên máy khác:
 

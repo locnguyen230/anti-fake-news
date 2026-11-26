@@ -1,3 +1,9 @@
+export function predictionContext(data, mode) {
+  if (mode === 'mock' || data.model_id === 'dev-mock-not-a-model') return 'mock';
+  if (data.model_id.endsWith('-fixture') && data.model_version.endsWith('-fixture')) return 'fixture';
+  return null;
+}
+
 export function createResultView(panel, detail, warning, stale) {
   return {
     clear() {
@@ -10,12 +16,12 @@ export function createResultView(panel, detail, warning, stale) {
       if (!panel.hidden) stale.hidden = false;
     },
     render(data, mode) {
-      const mock = mode === 'mock' || data.model_id === 'dev-mock-not-a-model';
-      const fixture = data.model_id.endsWith('-fixture') && data.model_version.endsWith('-fixture');
+      const source = predictionContext(data, mode);
+      const mock = source === 'mock';
       const limitation = 'Dự đoán của mô hình dựa trên dữ liệu huấn luyện. Hãy đối chiếu nguồn để xác minh sự thật.';
       let context = '';
       if (mock) context = 'Giả lập dev/test. Không dùng làm kết quả nghiên cứu. ';
-      else if (fixture) context = 'Mô hình huấn luyện trên dữ liệu tổng hợp. Chỉ dùng để kiểm thử. ';
+      else if (source === 'fixture') context = 'Mô hình huấn luyện trên dữ liệu tổng hợp. Chỉ dùng để kiểm thử. ';
       warning.textContent = context + limitation;
       detail.textContent = [
         'Nhãn dự đoán: ' + (data.label === 'fake' ? 'Nghi tin giả (fake)' : 'Nghi tin thật (real)'),

@@ -1,5 +1,11 @@
 # Báo cáo Kiểm thử Tích hợp Backend — AFN-039
 
+> **Cập nhật AFN-053, 26/11/2026:** Hook `load_for_parity` từng thiếu ở checkout
+> sau merge đã được bổ sung và kiểm chứng lại trên **32 mẫu Validation thật**,
+> max diff `1.25e-07`, không lỗi. Dữ liệu Train/Validation hiện đã có. Các số đo
+> bên dưới là bản bàn giao trước; kết quả regression, logging và blocker freeze
+> hiện tại xem [backend-final-check.md](backend-final-check.md).
+
 Ngày chạy: **26/11/2026** (giờ địa phương). Môi trường: **Windows 11 x64 (`Windows-11-10.0.26300-SP0`)**, **Python 3.13.1** (`.venv\issue9`), CPU (`torch 2.15.0+cpu`, 4 threads), chế độ hoàn toàn offline (`HF_HUB_OFFLINE=1`).
 
 > **Nguyên tắc bằng chứng:**
