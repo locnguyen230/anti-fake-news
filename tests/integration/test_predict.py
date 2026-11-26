@@ -32,7 +32,6 @@ from app import model_loader
 from app.config import IMAGE_MAX_BYTES, REPO_ROOT, Settings
 from app.main import create_app
 from app.model_bundle import load_bundle
-from app.predictor import BundlePredictor, load_for_parity
 from app.schemas import ErrorResponse, HealthResponse, PredictResponse
 from ml.common import load_dataset
 from ml.export_artifacts import export_all
@@ -153,16 +152,6 @@ def test_fixture_http_predict_matches_offline_parity_and_edge_cases(fixture_bund
     ]
     all_samples = [*val_samples, *extra_samples]
 
-    # Direct predictor parity via AFN-036 hook (app.predictor:load_for_parity)
-    parity_predictor = load_for_parity(bundle_dir)
-    try:
-        report = run_parity(bundle, parity_predictor, all_samples, encoder=encoder, atol=DEFAULT_SCORE_ATOL)
-        assert report.passed, report.failures
-        assert report.max_abs_score_diff is not None and report.max_abs_score_diff <= DEFAULT_SCORE_ATOL
-        assert report.labels_equal and report.truncated_equal and report.identity_equal and report.n_errors == 0
-    finally:
-        parity_predictor.close()
-
     # End-to-end HTTP /predict parity against OfflineReference
     offline = OfflineReference(bundle, encoder, batch_size=16)
     off_scores, off_labels, off_trunc = offline.score(all_samples)
@@ -184,6 +173,11 @@ def test_fixture_http_predict_matches_offline_parity_and_edge_cases(fixture_bund
         assert health.headers["X-AFN-Inference-Mode"] == "real"
         assert health.headers["X-AFN-Model-State"] == "ready"
         assert health.headers["access-control-allow-origin"] == ALLOWED_ORIGIN
+
+        report = run_parity(bundle, app.state.inference_adapter, all_samples, encoder=encoder, atol=DEFAULT_SCORE_ATOL)
+        assert report.passed, report.failures
+        assert report.max_abs_score_diff is not None and report.max_abs_score_diff <= DEFAULT_SCORE_ATOL
+        assert report.labels_equal and report.truncated_equal and report.identity_equal and report.n_errors == 0
 
         for sample, exp_score, exp_label, exp_trunc in zip(all_samples, off_scores, off_labels, off_trunc, strict=True):
             req_id = str(uuid4())
@@ -411,8 +405,15 @@ def test_real_candidate_multimodal_http_parity_and_demo_burst():
         ),
     ]
 
-    # Run AFN-036 parity through the real Backend predictor hook (load_for_parity)
-    predictor = load_for_parity(REAL_CANDIDATE_DIR)
+    settings = Settings(
+        _env_file=None,
+        environment="demo",
+        predictor_mode="real",
+        demo_token=TOKEN,
+        extension_origin=ALLOWED_ORIGIN,
+        model_artifact_path=REAL_CANDIDATE_DIR,
+    )
+    predictor = model_loader.load_predictor(settings)
     try:
         parity = run_parity(bundle, predictor, samples, encoder=predictor._encoder, atol=DEFAULT_SCORE_ATOL)
         assert parity.passed, parity.failures
@@ -423,16 +424,7 @@ def test_real_candidate_multimodal_http_parity_and_demo_burst():
         predictor.close()
 
     # Run full FastAPI service in demo/real mode with real candidate + CORS + token
-    app = create_app(
-        Settings(
-            _env_file=None,
-            environment="demo",
-            predictor_mode="real",
-            demo_token=TOKEN,
-            extension_origin=ALLOWED_ORIGIN,
-            model_artifact_path=REAL_CANDIDATE_DIR,
-        )
-    )
+    app = create_app(settings)
     with TestClient(app) as client:
         health = client.get("/health", headers={"Origin": ALLOWED_ORIGIN})
         assert health.status_code == 200

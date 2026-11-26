@@ -1,4 +1,4 @@
-    # AFN-006 ML environment lock. Install ON TOP OF backend/requirements.txt in the
+# AFN-006 ML environment lock. Install ON TOP OF backend/requirements.txt in the
 # same .venv (shared preprocessing + future model loader):
 #   python -m pip install -r backend/requirements.txt -r ml/requirements.txt
 # Resolved and smoke-tested: Python 3.14.7, macOS 15 arm64 (Apple M1, CPU).

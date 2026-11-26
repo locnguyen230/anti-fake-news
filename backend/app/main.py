@@ -111,7 +111,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise
         except Exception:
             # Also covers explicitly overridden providers; never retain error text.
-            adapter.mark_error()
+            await run_in_threadpool(adapter.mark_error)
             raise ModelNotReadyError from None
         if not adapter.ready:
             raise ModelNotReadyError

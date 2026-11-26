@@ -59,13 +59,13 @@ class InferenceAdapter:
 
     @staticmethod
     def _dispose(provider: Predictor | None) -> None:
-        close = getattr(provider, "close", None)
-        if callable(close):
-            try:
+        try:
+            close = getattr(provider, "close", None)
+            if callable(close):
                 close()
-            except Exception:
-                # Cleanup failures must not disclose private exception details.
-                pass
+        except Exception:
+            # Cleanup failures must not disclose private exception details.
+            pass
 
     def mark_error(self) -> None:
         with self._lock:
@@ -74,20 +74,23 @@ class InferenceAdapter:
             self._dispose(provider)
 
     def close(self) -> None:
-        self._predictor = None
-        self._state = ModelState.NOT_LOADED
+        with self._lock:
+            provider, self._predictor = self._predictor, None
+            self._state = ModelState.NOT_LOADED
+            self._dispose(provider)
 
     def predict(self, inputs: PredictorInput) -> PredictionResult:
-        predictor = self._predictor
-        if not self.ready or predictor is None:
-            raise ModelNotReadyError
-        try:
-            return PredictionResult.model_validate(predictor.predict(inputs))
-        except InputError:
-            raise
-        except Exception:
-            self.mark_error()
-            raise ModelNotReadyError from None
+        with self._lock:
+            predictor = self._predictor
+            if self._state is not ModelState.READY or predictor is None:
+                raise ModelNotReadyError
+            try:
+                return PredictionResult.model_validate(predictor.predict(inputs))
+            except InputError:
+                raise
+            except Exception:
+                self.mark_error()
+                raise ModelNotReadyError from None
 
 
 def create_adapter(settings: Settings) -> InferenceAdapter:

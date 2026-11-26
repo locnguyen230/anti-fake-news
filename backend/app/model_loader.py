@@ -35,11 +35,19 @@ def load_predictor(settings: Settings) -> BundlePredictor:
         raise BundleError("production requires a frozen bundle")
 
     encoder = ClipImageEncoder(offline=True)
-    check_encoder_identity(bundle, encoder.identity, encoder.dim)
     predictor = BundlePredictor(bundle, encoder)
-    with Image.new("RGB", (32, 32), (80, 120, 180)) as image, BytesIO() as stream:
-        image.save(stream, format="PNG")
-        predictor.predict(
-            PredictorInput(request_id=UUID(int=0), text="Synthetic startup check", image_bytes=stream.getvalue())
-        )
+    try:
+        check_encoder_identity(bundle, encoder.identity, encoder.dim)
+        with Image.new("RGB", (32, 32), (80, 120, 180)) as image, BytesIO() as stream:
+            image.save(stream, format="PNG")
+            predictor.predict(
+                PredictorInput(request_id=UUID(int=0), text="Synthetic startup check", image_bytes=stream.getvalue())
+            )
+    except Exception:
+        try:
+            predictor.close()
+        except Exception:
+            # Keep the initialization failure as the cause.
+            pass
+        raise
     return predictor
