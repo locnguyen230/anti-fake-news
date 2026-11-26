@@ -65,9 +65,10 @@ def main() -> None:
     environment.update(
         AFN_HOST="127.0.0.1",
         AFN_PORT=str(port),
-        AFN_ENVIRONMENT="test" if args.mode == "mock" else "demo",
+        AFN_ENVIRONMENT="production" if metadata else ("test" if args.mode == "mock" else "demo"),
         AFN_PREDICTOR_MODE=args.mode,
         AFN_DEMO_TOKEN=token,
+        AFN_MODEL_METADATA_SHA256=args.metadata_sha256 or "",
         AFN_MAX_REQUEST_BYTES=str(12 * 1024 * 1024),
         HF_HUB_OFFLINE="1",
     )

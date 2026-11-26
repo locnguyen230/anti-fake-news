@@ -83,7 +83,11 @@ def create_adapter(settings: Settings) -> InferenceAdapter:
         from app.dev.mock_predictor import MockPredictor
 
         adapter.initialize(MockPredictor)
-    elif "model_artifact_path" in settings.model_fields_set or settings.model_artifact_path.exists():
+    elif (
+        settings.environment == "production"
+        or "model_artifact_path" in settings.model_fields_set
+        or settings.model_artifact_path.exists()
+    ):
         def initialize_real() -> Predictor:
             from app.model_loader import load_predictor
 

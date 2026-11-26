@@ -37,11 +37,27 @@ def test_env_file_and_environment_precedence(tmp_path, monkeypatch):
 
 def test_example_is_loadable_from_another_working_directory(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("AFN_DEMO_TOKEN", "production-test-token")
+    monkeypatch.setenv("AFN_MODEL_METADATA_SHA256", "a" * 64)
     settings = Settings(_env_file=REPO_ROOT / ".env.example")
-    assert settings.demo_token is None
+    assert settings.environment == "production"
+    assert settings.predictor_mode == "real"
     assert settings.extension_origin is None
-    assert settings.model_artifact_path == REPO_ROOT / "artifacts" / "model"
+    assert settings.model_artifact_path == REPO_ROOT / "backend" / "artifacts" / "multimodal"
     assert Settings.model_config["env_file"] == REPO_ROOT / ".env"
+
+
+@pytest.mark.parametrize("overrides", [
+    {"demo_token": None},
+    {"demo_token": "   "},
+    {"model_metadata_sha256": None},
+    {"model_metadata_sha256": "invalid"},
+    {"predictor_mode": "mock"},
+])
+def test_production_requires_credentials_digest_and_real_inference(overrides):
+    config = {"demo_token": "test-only", "model_metadata_sha256": "a" * 64, **overrides}
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, environment="production", **config)
 
 
 @pytest.mark.parametrize("overrides", [

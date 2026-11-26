@@ -220,10 +220,18 @@ def _is_sha256(value: Any) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
-def _read_json_object(path: Path, name: str) -> dict[str, Any]:
+def _read_json_object(
+    path: Path, name: str, *, expected_sha256: str | None = None,
+) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise _fail(f"{name} unreadable") from exc
+    if expected_sha256 and sha256_bytes(data) != expected_sha256.lower():
+        raise _fail(f"{name} checksum mismatch")
+    try:
+        value = json.loads(data.decode("utf-8"))
+    except ValueError as exc:
         raise _fail(f"{name} unreadable") from exc
     if not isinstance(value, dict):
         raise _fail(f"{name} is not an object")
@@ -297,10 +305,17 @@ def validate_metadata(meta: dict[str, Any]) -> None:
             raise _fail("file size or checksum metadata")
 
 
-def load_bundle(bundle_dir: Path | str, *, expected_configuration: str | None = None) -> ModelBundle:
+def load_bundle(
+    bundle_dir: Path | str,
+    *,
+    expected_configuration: str | None = None,
+    expected_metadata_sha256: str | None = None,
+) -> ModelBundle:
     """Load and fully validate one bundle; raises ``BundleError`` on any problem."""
     root = Path(bundle_dir)
-    meta = _read_json_object(root / "metadata.json", "metadata.json")
+    meta = _read_json_object(
+        root / "metadata.json", "metadata.json", expected_sha256=expected_metadata_sha256,
+    )
     validate_metadata(meta)
     if expected_configuration and meta["configuration"] != expected_configuration:
         raise _fail("unexpected configuration")

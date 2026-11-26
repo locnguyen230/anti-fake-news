@@ -12,7 +12,7 @@ mặc định ở `release/backend.zip`. Ghi commit và `Get-FileHash
 release/backend.zip -Algorithm SHA256` trong biên bản bàn giao. Dùng
 `--output` để chọn tên mới nếu gói đã tồn tại. Gửi gói và checksum qua
 kênh đã thống nhất. ZIP chứa danh sách tệp nguồn cố định, gồm cấu hình
-mẫu, dependency pins và script smoke. Bundle, CLIP cache, dữ liệu và
+mẫu, dependency pins, schema và tài liệu. Bundle, CLIP cache, dữ liệu và
 secret được cấp riêng.
 
 Giải nén vào thư mục mới và chạy từ gốc của thư mục đã giải nén.
@@ -78,10 +78,11 @@ hash cấu hình processor với bundle.
 ## 3. Khởi động loopback và kiểm health
 
 Sao chép `.env.example` thành `.env` tại gốc gói. Giữ
-`AFN_ENVIRONMENT=demo`, `AFN_PREDICTOR_MODE=real` và
-`AFN_HOST=127.0.0.1`. Tạo token demo cục bộ và dùng cùng token
-trong Extension. Có thể đặt biến môi trường thay cho sửa file. Giữ token
-ngoài source ZIP, URL và log. Từ thư mục gốc đã giải nén:
+`AFN_ENVIRONMENT=production`, `AFN_PREDICTOR_MODE=real` và
+`AFN_HOST=127.0.0.1`. Điền SHA-256 đã duyệt từ AFN-049 vào
+`AFN_MODEL_METADATA_SHA256`, tạo token riêng cho Backend và nhập cùng token
+trong Extension. Có thể đặt biến môi trường thay cho sửa file.
+Từ thư mục gốc đã giải nén:
 
 ```powershell
 $env:AFN_DEMO_TOKEN = & $AfnPython -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -96,26 +97,22 @@ Kỳ vọng HTTP 200, `contract_version: 0.2.0`, `model_ready: true`,
 `AFN_PORT`, cập nhật URL tương ứng. Hành vi CORS qua Chromium được kiểm
 ở AFN-038/044. [Hợp đồng API](https://github.com/ngnsusinn/anti-fake-news/blob/main/docs/api-contract.md)
 
-Khi thiếu bundle hoặc cache, health vẫn có thể trả 200 với
-`model_ready: false` và trạng thái `not_loaded` hoặc `error`. Yêu
-cầu hợp lệ có token nhận 503 `model_not_ready`. Đối chiếu vị trí
-bundle, revision, file cache và hash, rồi khởi động lại service.
+Production dừng khởi động nếu thiếu token, bundle hoặc cache CLIP,
+hay nếu bundle sai hash, chưa freeze hoặc warm-up lỗi. Đối chiếu cấu
+hình, bundle và cache trước khi khởi động lại.
 
 ## 4. Smoke và khởi động lại offline
 
-Smoke tạo PNG, nội dung tiếng Anh tổng hợp, UUID và token tạm. Chạy
-từ thư mục `backend/` với `HF_HOME` và `HF_HUB_OFFLINE=1` đã đặt.
-Lấy giá trị `$AfnApprovedHash` từ biên bản AFN-049.
+Từ thư mục `backend/` của checkout mã nguồn cùng commit với ZIP, chạy
+kiểm tra HTTP production bằng `HF_HOME` và `HF_HUB_OFFLINE=1` đã đặt.
+Script dùng UUID, PNG, nội dung tiếng Anh tổng hợp và token tạm.
+Lấy `$AfnApprovedHash` từ biên bản AFN-049 và dùng đường dẫn bundle đã triển khai.
 
 ```powershell
-# Kiểm đường lỗi khi thiếu model.
-& $AfnPython tests/smoke_local.py
-
-# Kiểm bundle thật đã freeze trong một process mới.
-& $AfnPython tests/smoke_local.py --bundle ./artifacts/multimodal --metadata-sha256 $AfnApprovedHash
+& $AfnPython tests/smoke_local.py --bundle $AfnBundlePath --metadata-sha256 $AfnApprovedHash
 ```
 
-Lần hai phải có health ready, 401 với request thiếu token, và 200 với
+Kỳ vọng health ready, 401 với request thiếu token, và 200 với
 multipart hợp lệ. Smoke kiểm UUID, model ID/version, nhãn, score, thời
 gian và truncation. Sau khi có wheelhouse, cache và bundle đã xác thực,
 ngắt kết nối bên ngoài nhưng giữ loopback, chạy lại smoke ở một process
