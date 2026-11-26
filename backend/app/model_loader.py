@@ -31,8 +31,12 @@ def load_predictor(settings: Settings) -> BundlePredictor:
         raise BundleError("bundle identifiers disagree with fixture metadata")
     if is_fixture and settings.environment not in ("dev", "test"):
         raise BundleError("a fixture bundle requires dev or test")
-    if settings.environment == "production" and bundle.metadata["status"] != "frozen":
-        raise BundleError("production requires a frozen bundle")
+    if (
+        settings.environment == "production"
+        and bundle.metadata["status"] == "candidate"
+        and not settings.allow_candidate_model
+    ):
+        raise BundleError("production requires explicit approval to load a candidate bundle")
 
     encoder = ClipImageEncoder(offline=True)
     predictor = BundlePredictor(bundle, encoder)

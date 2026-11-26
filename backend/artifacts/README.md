@@ -12,6 +12,8 @@ python backend/tests/smoke_local.py --candidate --bundle backend/artifacts/multi
 
 Lệnh chạy model thật trên loopback ở chế độ `demo`, dùng một ảnh và bài viết tổng hợp để kiểm tra `GET /health`, xác thực token và `POST /predict`.
 
+Để kiểm thử cấu hình production cho candidate đã chọn, thêm `--production --metadata-sha256 $AfnCandidateHash`, trong đó `$AfnCandidateHash` là SHA-256 của `metadata.json` trong chính bundle đó. Đặt `AFN_ALLOW_CANDIDATE_MODEL=true` và `AFN_MODEL_METADATA_SHA256` cùng giá trị digest trong `.env` để chạy dịch vụ.
+
 ## Bundle production
 
 Lấy bundle `status: frozen` và SHA-256 đã duyệt của `metadata.json` từ [AFN-049](https://github.com/ngnsusinn/anti-fake-news/issues/49). Từ gốc repository, thay giá trị ví dụ bằng digest được bàn giao:

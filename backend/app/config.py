@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     )
     model_artifact_path: Path = Field(default=REPO_ROOT / "artifacts" / "model", repr=False)
     model_metadata_sha256: str | None = Field(default=None, pattern=r"^[0-9a-fA-F]{64}$")
+    allow_candidate_model: bool = False
     max_request_bytes: int = Field(default=12 * 1024 * 1024, gt=IMAGE_MAX_BYTES)
 
     @model_validator(mode="after")
