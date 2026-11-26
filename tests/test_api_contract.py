@@ -35,7 +35,7 @@ def make_image(format="PNG", size=(2, 2), orientation=None):
 
 def app(mode="mock", with_token=True):
     return create_app(Settings(
-        _env_file=None, environment="test", predictor_mode=mode,
+        _env_file=None, _env_prefix="AFN_CONTRACT_TEST_", environment="test", predictor_mode=mode,
         demo_token=TOKEN if with_token else None,
     ))
 
@@ -81,6 +81,7 @@ class ApiContractQATests(unittest.TestCase):
             self.assertIs(type(payload["text_truncated"]), bool)
             self.assertEqual(payload["model_id"], "dev-mock-not-a-model")
             self.assertEqual(response.headers["X-AFN-Inference-Mode"], "mock")
+            self.assertNotIn("X-AFN-Decision-Threshold", response.headers)
 
     def test_valid_input_real_mode_stays_503(self):
         with TestClient(app("real")) as client:

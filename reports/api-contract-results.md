@@ -1,17 +1,16 @@
 # Báo cáo kiểm thử hợp đồng API — AFN-028
 
-**Ngày:** 25/11/2026 (giờ Việt Nam)  
-**Người phụ trách:** `dangnguyen0512` (QA)  
-**Nguồn kiểm tra:** `main` tại `976c912` (trước thay đổi QA)  
-**Hợp đồng:** [API v0.2.0](../docs/api-contract.md), thay thế hợp đồng nháp v0.1.1.  
-**Môi trường kiểm tra:** Linux, Python **3.12.14**; cài thư viện theo `backend/requirements.txt`. Môi trường khác máy demo của nhóm.
+**Nguồn kiểm tra lại:** `main` tại `180384b`.
+**Người phụ trách:** `dangnguyen0512` (QA).
+**Hợp đồng:** [API v0.2.0](../docs/api-contract.md).
+**Môi trường:** Windows, Python 3.13.0, cấu hình kiểm thử độc lập với biến triển khai Backend.
 
 ## 1. Kết quả chạy thực tế
 
 | Lệnh | Kết quả |
 | --- | --- |
-| `python -m unittest discover -s tests -p test_api_contract.py -v` | **13/13 test PASS**, 0,176 giây |
-| `cd backend && python -m pytest -q` | **184/184 test PASS**, 1,21 giây |
+| `python -m unittest discover -s tests -p test_api_contract.py -v` | **13/13 PASS** với `main` tại `180384b` |
+| `cd backend && python -m pytest -q` | 184/184 PASS trong lượt kiểm thử lịch sử trên Linux tại `976c912` |
 
 Các bài test QA dùng ảnh/văn bản **tự tạo** và token **chỉ dùng trong kiểm thử**. Thành công 200 là **mock được bật tường minh** (`AFN_ENVIRONMENT=test`, `AFN_PREDICTOR_MODE=mock`), không phải suy luận mô hình thật.
 
@@ -20,7 +19,7 @@ Các bài test QA dùng ảnh/văn bản **tự tạo** và token **chỉ dùng 
 | Nhóm | Ca kiểm tra QA | Kết quả |
 | --- | --- | --- |
 | Health/real-mode | Health 200, `model_ready=false`, contract 0.2.0, cache no-store | PASS |
-| Mock hợp lệ | 200, UUID chuẩn, score hợp lệ, `model_id=dev-mock-not-a-model` | PASS (mock) |
+| Mock hợp lệ | 200, UUID chuẩn, score hợp lệ, `model_id=dev-mock-not-a-model`, không có header ngưỡng model thật | PASS (mock) |
 | Model chưa sẵn sàng | Real mode nhận input hợp lệ rồi trả 503, echo UUID | PASS |
 | Xác thực | Thiếu/sai token trả 401 trước khi parse body; server chưa cấu hình token từ chối | PASS |
 | UUID và trường bắt buộc | UUID sai/thiếu, text thiếu trả 400; giữ UUID nếu đã parse an toàn | PASS |
@@ -36,9 +35,9 @@ Các ca giới hạn toàn body, thiếu/giả Content-Length, parser stream, pi
 ## 3. Sai lệch và giới hạn
 
 - **Không phát hiện lỗi trong các ca API v0.2.0 đã chạy.** Lần chạy đầu có 2 ca QA FAIL vì chính test chưa gắn token cho request JSON và giả định UUID vẫn được parse ở request thiếu ảnh nhưng gửi form-urlencoded. Đã điều chỉnh test cho đúng thứ tự xác thực/header, sau đó 13/13 PASS.
-- **BLOCKED — kiểm thử suy luận thật:** `/predict` mặc định real-mode vẫn trả `503 model_not_ready`, vì loader/model thật thuộc #37/#38. Không dùng mock để xác nhận chất lượng dự đoán hoặc tốc độ mô hình.
+- **Suy luận thật:** bộ test contract kiểm tra 503 khi chạy chế độ real mà chưa nạp model. Nghiệm thu với bundle và cấu hình bàn giao vẫn cần lượt chạy riêng.
 - **BLOCKED — xác nhận liên vai trò:** API v0.2.0 chưa có phê duyệt cuối của ML và Extension theo tài liệu; cần review trước nghiệm thu #28.
-- **Cần chạy lại trên môi trường chính thức** (đặc biệt Python và máy Windows demo) khi nhóm chốt dependency và tích hợp ảnh/model cuối. Kết quả local Python 3.12.14 không thay thế kiểm thử máy demo.
+- **Máy demo:** kết quả Windows trên máy phát triển cần được đối chiếu trên cấu hình bàn giao.
 - **Không có 403 bắt buộc**: hợp đồng hiện chưa thiết lập chính sách phân biệt bị cấm sau xác thực.
 
 ## 4. Bàn giao và bước tiếp theo
