@@ -9,9 +9,12 @@ from secrets import token_urlsafe
 import socket
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 import time
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, build_opener
+
+from package_extension import build_extension, runtime_config
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,7 +45,7 @@ def loopback_endpoint(value):
 
 
 @contextmanager
-def run_backend(mode, demo_token):
+def run_backend(mode, demo_token, artifact_path=None):
     with socket.socket() as socket_ref:
         socket_ref.bind(("127.0.0.1", 0))
         port = str(socket_ref.getsockname()[1])
@@ -53,6 +56,8 @@ def run_backend(mode, demo_token):
         AFN_PREDICTOR_MODE=mode,
         AFN_DEMO_TOKEN=demo_token,
     )
+    if artifact_path is not None:
+        environment["AFN_MODEL_ARTIFACT_PATH"] = str(artifact_path)
     process = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", port],
         cwd=ROOT / "backend",
@@ -82,25 +87,23 @@ def run_backend(mode, demo_token):
                 process.wait()
 
 
-def run_chromium(environment):
-    return subprocess.call(["node", "tests/frontend/browser-smoke.mjs"], cwd=ROOT, env=environment)
+def run_chromium(endpoint, token, outcome):
+    port = urlsplit(endpoint).port or 80
+    with TemporaryDirectory(prefix="afn-extension-smoke-package-") as temporary:
+        package = Path(temporary) / "extension"
+        build_extension(package, runtime_config(token, port))
+        environment = dict(os.environ, AFN_EXTENSION_UNPACKED=str(package), AFN_SMOKE_OUTCOME=outcome)
+        environment.pop("AFN_REAL_TEST_TOKEN", None)
+        return subprocess.call(["node", "tests/frontend/browser-smoke.mjs"], cwd=ROOT, env=environment)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--real-endpoint", type=loopback_endpoint, help="Locally running Backend with a locked model")
     args = parser.parse_args()
-    environment = os.environ.copy()
-    for variable in (
-        "AFN_LOCAL_TEST_TOKEN",
-        "AFN_MOCK_TEST_URL",
-        "AFN_NOT_READY_TEST_URL",
-        "AFN_REAL_TEST_URL",
-    ):
-        environment.pop(variable, None)
-
     if args.real_endpoint:
-        if not environment.get("AFN_REAL_TEST_TOKEN"):
+        real_token = os.environ.get("AFN_REAL_TEST_TOKEN")
+        if not real_token:
             parser.error("Set AFN_REAL_TEST_TOKEN for the configured real endpoint")
         try:
             mode, health = read_health(args.real_endpoint)
@@ -108,17 +111,19 @@ def main():
             parser.error("Could not read health from the configured loopback endpoint")
         if mode != "real" or health.get("model_ready") is not True:
             parser.error("The real endpoint must advertise mode=real and model_ready=true")
-        environment["AFN_REAL_TEST_URL"] = args.real_endpoint
-        return run_chromium(environment)
+        return run_chromium(args.real_endpoint, real_token, "real")
 
     demo_token = token_urlsafe(32)
-    with run_backend("mock", demo_token) as mock, run_backend("real", demo_token) as not_ready:
-        environment.update(
-            AFN_MOCK_TEST_URL=mock,
-            AFN_NOT_READY_TEST_URL=not_ready,
-            AFN_LOCAL_TEST_TOKEN=demo_token,
+    with (
+        TemporaryDirectory(prefix="afn-extension-smoke-") as temporary,
+        run_backend("mock", demo_token) as mock,
+        run_backend("real", demo_token, Path(temporary) / "absent-bundle") as not_ready,
+    ):
+        return (
+            run_chromium(mock, demo_token, "mock")
+            or run_chromium(mock, token_urlsafe(32), "unauthorized")
+            or run_chromium(not_ready, demo_token, "not-ready")
         )
-        return run_chromium(environment)
 
 
 if __name__ == "__main__":

@@ -66,6 +66,20 @@ H=data/private/ml-v2/train-validation
     --split $H/split.csv --image-root data --offline --out cache/parity/real-v2.json
 ```
 
+## 3c. Bundle cuối sau khi khóa protocol (26/11/2026, cùng máy)
+
+Bundle xuất lại từ run `20261126T024649Z`, được ghim trong [hồ sơ freeze](../release/model-freeze.json).
+Cùng 32 mẫu Validation, CLIP và atol như mục 3b. Chạy với hai predictor:
+
+| Predictor | text-only | image-only | multimodal |
+| --- | --- | --- | --- |
+| `ReferenceBundlePredictor` (harness) | PASS, max \|Δ\| = 0 | PASS, max \|Δ\| = 0 | PASS, max \|Δ\| = 0 |
+| `app.predictor.BundlePredictor` (Backend #37) | PASS, max \|Δ\| = 0 | PASS, max \|Δ\| = 0 | PASS, max \|Δ\| = 0 |
+
+Cả hai đều khớp nhãn, `text_truncated` và model ID/version, không có lỗi. Lượt Backend dùng
+`--predictor module:factory`, với factory gọi `BundlePredictor(load_bundle(dir), ClipImageEncoder(offline=True))`.
+Lượt này không đi qua HTTP; kiểm qua dịch vụ thuộc #43.
+
 ## 4. Test (`tests/test_inference_parity.py`)
 
 24 test: 23 chạy với `FakeImageEncoder` (test double, không phải CLIP), 1 test CLIP thật chỉ chạy khi đặt `AFN_CLIP_TESTS=1`.

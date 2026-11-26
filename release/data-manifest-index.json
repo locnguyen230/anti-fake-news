@@ -1,0 +1,231 @@
+{
+  "schema": "afn-data-manifest-index-v1",
+  "issue": "AFN-048",
+  "as_of": "2026-11-26",
+  "status": "DRAFT_PENDING_QA",
+  "evidence_kind": "REAL_SNAPSHOT_METADATA_ONLY",
+  "repository": "https://github.com/ngnsusinn/anti-fake-news",
+  "code_revision": "819e2fa42a44f2906d0e9e08bf884c53cdbe8f25",
+  "scope": {
+    "distribution": "aggregate_metadata_only",
+    "per_sample_records_included": false,
+    "test_payload_included": false,
+    "test_ids_included": false,
+    "raw_content_included": false,
+    "rights_approval_claimed": false,
+    "dataset_freeze_approved": false,
+    "approved_for_public_release": false,
+    "reason": "DATA/QA chưa duyệt quyền và danh sách ID được chia sẻ; chỉ số liệu tổng hợp và hash. Không cấp quyền truy cập snapshot hoặc Test."
+  },
+  "provenance": {
+    "source_dataset": "FakeNewsNet",
+    "source_repository": "https://github.com/KaiDMML/FakeNewsNet",
+    "source_revision": "654361e1c8d5baa751baf1dac5032df621652280",
+    "source_csv_sha256": {
+      "gossipcop_fake.csv": "c6932bffadb1230bc61c66bb2ca298f4ef28ce849d268313ad2eed41d18d4c99",
+      "gossipcop_real.csv": "d721e9a8b7e660da05c089691743c33fecb25367074e936b5fab3d85cdcbe79f",
+      "politifact_fake.csv": "abe7fe7aad801b1e2ab5fc963cbd0881d9670190262ae3df85e91c3380bd004c",
+      "politifact_real.csv": "2500f86a7addca0f59fe8cf089c0f802d3eca6980f53538992b3b0e9687dbae0"
+    },
+    "source_hash_evidence": {
+      "path": "scripts/recover_split_provenance.py",
+      "verification": "REPORTED_PINNED_NOT_REHASHED_THIS_RUN"
+    },
+    "label_origin": "Nhãn fake/real kế thừa từ CSV nguồn, không phải kết luận kiểm chứng độc lập.",
+    "source_definition": "gossipcop và politifact là phân tập, không đồng nghĩa nhà xuất bản.",
+    "publisher_definition": "Nhà xuất bản bài gốc đã đối soát; hostname đề xuất chưa phải publisher đã duyệt.",
+    "recovery_snapshot": {
+      "reported_count": 400,
+      "both_modalities": 286,
+      "text_only": 99,
+      "image_only": 15,
+      "sha256": null,
+      "evidence": "reports/recovery-summary.md",
+      "verification": "REPORTED_NOT_REBUILT"
+    }
+  },
+  "legacy_data_export": {
+    "version": "data-export-pr87",
+    "role": "baseline_only_not_frozen_dataset",
+    "verification": "TWO_PINNED_GITHUB_READS_MATCH",
+    "samples": 352,
+    "groups": 342,
+    "by_source_label": {
+      "gossipcop:fake": 98,
+      "gossipcop:real": 95,
+      "politifact:fake": 89,
+      "politifact:real": 70
+    },
+    "by_modality": {
+      "full": 274,
+      "noimg": 66,
+      "notext": 12
+    },
+    "missing_publisher": 352,
+    "missing_event": 352,
+    "splits": {
+      "train": {
+        "samples": 247,
+        "groups": 240
+      },
+      "validation": {
+        "samples": 52,
+        "groups": 51
+      },
+      "test": {
+        "samples": 53,
+        "groups": 51
+      }
+    },
+    "missing_ids": 0,
+    "duplicate_ids": 0,
+    "declared_groups_cross_split": 0,
+    "known_limit": "AFN-031 phát hiện ảnh trùng byte qua split; group ID không giao nhau không chứng minh không leakage.",
+    "files": {
+      "data/processed/manifest.json": {
+        "sha256": "0d17dae8b2815985e5341f6a3f17afea22c96237c5f666e63ab824de64ca99ef",
+        "bytes": 1941904,
+        "two_reads_identical": true
+      },
+      "data/processed/groups.json": {
+        "sha256": "3bf9199395a5fb7ba0d063fdebeb40d440e648b379dd28ab8068bcd1474e28fe",
+        "bytes": 12818,
+        "two_reads_identical": true
+      },
+      "data/split/train.json": {
+        "sha256": "cfb88a45316411431ce365e1372c2349aad53e5b02b466b4a9b4cb3d6ecf14d9",
+        "bytes": 18622,
+        "two_reads_identical": true
+      },
+      "data/split/validation.json": {
+        "sha256": "1af2da1c02d24975c60253f2f4102e246ed67660876a8e02fb5b8fb3d423f720",
+        "bytes": 3927,
+        "two_reads_identical": true
+      },
+      "data/split/test.json": {
+        "sha256": "aec6d2f56af24e7bea9f047cccf6727c657522812fe94ee4266b70ef07118310",
+        "bytes": 4003,
+        "two_reads_identical": true
+      }
+    }
+  },
+  "selected_dataset": {
+    "version": "ml-v2",
+    "role": "TEAM_SELECTED_PENDING_QA_FREEZE",
+    "samples": 218,
+    "groups": 208,
+    "seed": 42,
+    "split_unit": "group_id",
+    "target_ratios": {
+      "train": 0.7,
+      "validation": 0.15,
+      "test": 0.15
+    },
+    "splits": {
+      "train": {
+        "samples": 153,
+        "groups": 143
+      },
+      "validation": {
+        "samples": 32,
+        "groups": 32
+      },
+      "test": {
+        "samples": 33,
+        "groups": 33
+      }
+    },
+    "train_validation_source_label": {
+      "train": {
+        "gossipcop:fake": 50,
+        "gossipcop:real": 57,
+        "politifact:fake": 30,
+        "politifact:real": 16
+      },
+      "validation": {
+        "gossipcop:fake": 11,
+        "gossipcop:real": 12,
+        "politifact:fake": 6,
+        "politifact:real": 3
+      }
+    },
+    "test_source_label": null,
+    "test_metadata_scope": "count and group count only; QA controls IDs, labels and payload",
+    "exclusions_first_reason": {
+      "missing_image": 66,
+      "image_too_small": 36,
+      "body_too_short": 14,
+      "missing_body": 12,
+      "body_too_long": 3,
+      "boilerplate_body": 3
+    },
+    "train_validation_manifest_sha256": "a42af272426dc73019dd1f7b010de9feb1f3fb67f8b2740c672f6a34a237f44a",
+    "locked_split_csv_sha256": "81058045c8397ed9cce8645267466e79a2fc346606865e05ade9b303b77b9c1f",
+    "full_qa_split_sha256": null,
+    "test_manifest_sha256": null,
+    "verification": "HASH_DECLARATIONS_MATCH_QA_REPRODUCTION_REPORT_NOT_LOCAL_PRIVATE_BYTES",
+    "evidence": "reports/ml-train-validation.md; reports/leakage-audit.md",
+    "rights_status": "unverified per AFN-034; no release permission inferred",
+    "known_limits": {
+      "publisher_hostname_cross_split": 21,
+      "event_id_missing": true,
+      "politifact_real_validation": 3
+    }
+  },
+  "freeze": {
+    "schema": "afn-model-freeze-v1",
+    "status": "draft",
+    "protocol_status": "locked",
+    "run_id": "20261126T024649Z",
+    "ml_signed": true,
+    "qa_signed": false,
+    "test_loaded": false,
+    "record_sha256_reported": "7afd69ded04c225beb6537295555178d901383983a19b552d6e27c10aac983f8",
+    "references": {
+      "configs/experiment.yaml": {
+        "sha256": "dd4da7bde49905e06d6e89dc9e1a7ff3518bc2cabde424d798bb85d19e805298",
+        "bytes": 1381,
+        "two_reads_identical": true
+      },
+      "configs/selected-models.json": {
+        "sha256": "ced48940b30aab32e48625743f4697f92b3728f1f94947c7c1b9db83f5167030",
+        "bytes": 1866,
+        "two_reads_identical": true
+      },
+      "release/model-freeze.json": {
+        "sha256": "9b7d3d1ed529bb9510f3ad9df839e967661e0bb712a5ecaee42359e53206bd5f",
+        "bytes": 6768,
+        "two_reads_identical": true
+      }
+    },
+    "hash_reconciliation": "manifest, split, protocol, selected-models, run and counts match; private bytes and full signature verification not run"
+  },
+  "reproduction": {
+    "guide": "docs/rebuild-data.md",
+    "data_card": "docs/data-card.md",
+    "report": "reports/data-reproduction.md",
+    "snapshot_method": "Fetch exact Git blobs at code_revision; compare raw SHA-256 and metadata/split lists twice.",
+    "private_ml_v2_command": "python -m ml.prepare_dataset --manifest data/processed/manifest.json --groups data/processed/groups.json --image-root data --out data/private/afn-048-rebuild-a",
+    "qa_reproduction_evidence": "reports/leakage-audit.md",
+    "full_pipeline_this_run": "NOT_RUN_PRIVATE_INPUTS_UNAVAILABLE",
+    "internet_recovery": "NOT_GUARANTEED; new recovery creates a new version and must not replace locked data",
+    "before_final": "QA supplies independently approved private snapshot/checksums and runs two fresh rebuilds, compares exact assignments and bytes, signs off permitted metadata."
+  },
+  "handoff": {
+    "owner": "locnguyen230",
+    "reviewer": "dangnguyen0512",
+    "dependencies": {
+      "AFN-018": "closed_not_planned",
+      "AFN-033": "closed_not_planned",
+      "AFN-049": "draft_ml_signed_qa_missing"
+    },
+    "blockers": [
+      "Recovery 400 snapshot bytes, completion ledger and independently approved checksum not accessible.",
+      "Private ML-v2 full QA split and manifest not accessible in this run.",
+      "Rights and publisher/event provenance incomplete.",
+      "QA review and AFN-033 final data card not signed off."
+    ],
+    "version_policy": "New version if manifest, grouping, split or metadata policy changes; never edit locked dataset after Test. Regenerate index and report; notify DATA/ML/QA and rerun affected pipeline before freeze.",
+    "data_card_update": "Integration to link the approved report/index and final counts; do not modify Integration-owned docs in this issue."
+  }
+}

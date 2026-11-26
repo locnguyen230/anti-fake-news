@@ -1,7 +1,7 @@
 # AFN-034: Train/Validation trên dữ liệu thật (dataset ml-v2)
 
 Ngày chạy: 25/11/2026, macOS M1, CPU, CLIP ViT-B/32 đã ghim. `evidence_kind: VALIDATION_ONLY`.
-**Test chưa được nạp** (33 dòng bị khóa tới khi #49 ký freeze). Protocol `configs/experiment.yaml` vẫn ở trạng thái `proposed`.
+**Test chưa được nạp** (33 dòng bị khóa tới khi #49 ký freeze). Protocol `configs/experiment.yaml` đã khóa (`status: locked`, #111). Run hiện hành: `20261126T024649Z`.
 
 ## 1. Chuẩn bị dữ liệu (`ml.prepare_dataset`)
 
@@ -83,12 +83,13 @@ Image-only gần như đoán mọi bài là fake (ngưỡng 0,30), nên Macro-F1
 
 ## 3. Còn mở
 
-- DATA/QA cần xác nhận các luật lọc và bản chia lại `ml-v2` (thay cho `data/split/*.json`), và đưa
-  Test cùng payload gốc ra khỏi repo công khai.
+- 26/11/2026: nhóm chọn `ml-v2` làm split chính thức. Audit #29 ghi 21 hostname publisher nằm ở
+  nhiều split; đây là giới hạn phải nêu khi báo cáo Test. Payload Test phải nằm ngoài repo công khai.
 - `rights` của các mẫu đang ghi `unverified`: bản xuất chưa có bằng chứng quyền theo publisher.
 - PolitiFact-real chỉ còn 16 mẫu Train và 3 mẫu Val, nên số liệu theo nguồn rất không ổn định.
-- Xuất gói ứng viên (#35) và kiểm tra parity (#36) nằm ở các PR riêng, xếp chồng lên PR này.
-- #49 (freeze) và #50 (Test) chưa chạy. Thứ tự cần giữ: protocol được khóa, #49 ký, rồi #50 mới chấm Test một lần.
+- Sau khi khóa protocol (hash config đổi `11dab478…` → `dd4da7bd…`), ML chạy lại lượt
+  `20261126T024649Z`. Lượt này cho đúng cùng C, ngưỡng và Macro-F1 với lượt `20261125T145232Z`.
+- #49: hồ sơ freeze đã có chữ ký ML, chờ QA ([biên bản](pre-test-signoff.md)). #50 chỉ chấm Test sau khi đủ hai chữ ký.
 
 ## Lệnh tái lập
 

@@ -40,3 +40,19 @@ test('health does not send a token and requires a valid contract', async () => {
   const broken = createApiClient(async () => Response.json({ hello: 'world' }));
   await assert.rejects(broken.health(config), { kind: 'invalid-response' });
 });
+
+test('predict rejects a response with invalid fields or unexpected properties', async () => {
+  const valid = {
+    request_id: id, label: 'real', fake_score: 0.42, model_id: 'model',
+    model_version: 'v1', processing_time_ms: 2, text_truncated: false,
+  };
+  for (const invalid of [
+    { fake_score: 1.2 },
+    { model_version: ' ' },
+    { text_truncated: 'false' },
+    { additional_property: true },
+  ]) {
+    const client = createApiClient(async () => Response.json({ ...valid, ...invalid }));
+    await assert.rejects(client.predict(config, draft, id), { kind: 'invalid-response' });
+  }
+});

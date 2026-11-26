@@ -1,4 +1,4 @@
-"""Local settings; request enforcement lives in validation.py."""
+"""Runtime settings; request enforcement lives in validation.py."""
 
 from pathlib import Path
 from typing import Literal
@@ -24,22 +24,30 @@ class Settings(BaseSettings):
     # The supported launcher is restricted to loopback.
     host: Literal["127.0.0.1", "::1", "localhost"] = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
-    environment: Literal["demo", "dev", "test"] = "demo"
+    environment: Literal["production", "demo", "dev", "test"] = "demo"
     predictor_mode: Literal["real", "mock"] = "real"
     demo_token: SecretStr | None = Field(default=None, repr=False)
     extension_origin: str | None = Field(
         default=None, pattern=r"^chrome-extension://[a-p]{32}$"
     )
     model_artifact_path: Path = Field(default=REPO_ROOT / "artifacts" / "model", repr=False)
+    model_metadata_sha256: str | None = Field(default=None, pattern=r"^[0-9a-fA-F]{64}$")
+    allow_candidate_model: bool = False
     max_request_bytes: int = Field(default=12 * 1024 * 1024, gt=IMAGE_MAX_BYTES)
 
     @model_validator(mode="after")
-    def mock_requires_dev_or_test(self) -> "Settings":
+    def validate_runtime(self) -> "Settings":
         if self.predictor_mode == "mock" and self.environment not in ("dev", "test"):
             raise ValueError("Mock requires AFN_ENVIRONMENT=dev or test")
+        if self.environment == "production":
+            token = self.demo_token.get_secret_value() if self.demo_token else ""
+            if not token or token != token.strip():
+                raise ValueError("Production requires a configured AFN_DEMO_TOKEN")
+            if self.model_metadata_sha256 is None:
+                raise ValueError("Production requires AFN_MODEL_METADATA_SHA256")
         return self
 
-    @field_validator("demo_token", "extension_origin", mode="before")
+    @field_validator("demo_token", "extension_origin", "model_metadata_sha256", mode="before")
     @classmethod
     def empty_is_unconfigured(cls, value: object) -> object:
         return None if value == "" else value

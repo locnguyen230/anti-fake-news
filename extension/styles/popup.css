@@ -1,0 +1,95 @@
+:root {
+  color-scheme: light;
+  font: 14px/1.45 system-ui, sans-serif;
+  color: #18262b;
+  background: #f4f7f6;
+}
+
+* { box-sizing: border-box; }
+body { width: 320px; margin: 0; }
+main { padding: 18px; }
+h1, p { margin: 0; }
+h1 { font-size: 17px; }
+#status:not(:empty) { margin-top: 12px; color: #455760; }
+
+#prediction {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid #d7e2df;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.score-label { color: #455760; font: 13px ui-monospace, monospace; }
+#score { font-size: 42px; line-height: 1.2; font-weight: 700; font-variant-numeric: tabular-nums; }
+#verdict {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+[data-label="fake"] #verdict { color: #872133; background: #fae8eb; }
+[data-label="real"] #verdict { color: #135746; background: #e2f5eb; }
+#context { margin-top: 8px; color: #455760; font-size: 12px; }
+
+#predict {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 7px;
+  background: #1d6657;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+}
+#predict:disabled { cursor: default; opacity: .6; }
+#predict:hover:not(:disabled) { background: #155345; }
+
+#analysis-details {
+  margin-top: 12px;
+  border: 1px solid #d7e2df;
+  border-radius: 9px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+#analysis-details > summary {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 650;
+  color: #1d6657;
+}
+#analysis-details > section {
+  padding: 12px;
+  border-top: 1px solid #d7e2df;
+}
+#analysis-details h2 { margin: 0 0 8px; font-size: 14px; }
+#analysis-details dl { margin: 0; }
+#analysis-details dt, #detail-text-label { font-weight: 600; }
+#analysis-details dd { margin: 0 0 8px; }
+#analysis-details dd:last-child { margin-bottom: 0; }
+#detail-text-label { margin-top: 8px; }
+#detail-text {
+  max-height: 148px;
+  margin: 4px 0 12px;
+  padding: 8px;
+  border: 1px solid #d7e2df;
+  border-radius: 6px;
+  background: #f4f7f6;
+  overflow: auto;
+  white-space: pre-wrap;
+  font: inherit;
+}
+#analysis-details figure { margin: 0; }
+#detail-image {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 6px;
+}
+#analysis-details figcaption { margin-top: 6px; color: #455760; font-size: 12px; }
+#analysis-details ol { margin: 0; padding-left: 20px; }
+#analysis-details li + li { margin-top: 6px; }
+:focus-visible { outline: 2px solid #1b7865; outline-offset: 2px; }

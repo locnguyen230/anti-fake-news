@@ -3,20 +3,25 @@
   "name": "Anti Fake News",
   "version": "0.1.0",
   "minimum_chrome_version": "102",
-  "description": "M\u1edf phi\u00ean ph\u00e2n t\u00edch v\u00e0 tr\u00edch n\u1ed9i dung t\u1eeb tab \u0111ang xem.",
+  "description": "Hiển thị điểm fake_score và nhãn dự đoán cho bài viết đang xem.",
   "action": {
-    "default_title": "Ph\u00e2n t\u00edch b\u00e0i vi\u1ebft"
-  },
-  "background": {
-    "service_worker": "service-worker.js",
-    "type": "module"
+    "default_title": "Ph\u00e2n t\u00edch b\u00e0i vi\u1ebft",
+    "default_popup": "popup.html"
   },
   "permissions": [
     "activeTab",
-    "scripting",
-    "storage"
+    "scripting"
   ],
   "host_permissions": [
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "https://www.reuters.com/*",
+    "https://*.reutersmedia.net/*",
+    "https://cloudfront-us-east-2.images.arcpublishing.com/*",
+    "https://media.cnn.com/*",
+    "https://ichef.bbci.co.uk/*",
+    "https://dims.apnews.com/*",
+    "https://i.guim.co.uk/*",
+    "https://www.aljazeera.com/*",
+    "https://i.abcnewsfe.com/*"
   ]
 }

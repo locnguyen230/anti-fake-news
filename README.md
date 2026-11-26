@@ -1,15 +1,19 @@
 # Anti-fake-news
 
-Local FastAPI foundation and dev mock for **AFN-007 / AFN-008 / AFN-009**.
+FastAPI service and Chromium extension for multimodal article analysis.
 Python **3.13** is the verified shared setup for Backend and ML on Windows x64.
 See [ML environment](docs/ml-environment.md) for shared dependencies and CLIP checks.
 
-By default, `GET /health` reports `model_ready: false` and `POST /predict`
-returns HTTP 503 without reading uploads. An explicit dev/test mock can return
-synthetic responses for UI development; see [dev-mock.md](docs/dev-mock.md).
-The real-mode scaffold returns 503 until the trained predictor is integrated.
+## Production
 
-## Setup and run
+Follow the [Backend deployment guide](docs/backend-setup.md) to prepare a real
+Multimodal bundle and the pinned CLIP cache. Copy `.env.example`
+to `.env`, supply `AFN_DEMO_TOKEN` and `AFN_MODEL_METADATA_SHA256`,
+then run `python -m app` from `backend/`. The production server starts only after
+checking the bundle and warming up the real model. The [Chromium extension](docs/extension-setup.md)
+uses the loopback Backend and the same token.
+
+## Development setup
 
 Verified here: Windows x64, Python **3.13.1**. Reuse an existing working virtual environment.
 This checkout uses `.venv/issue9`; this implementation creates no additional environment.
@@ -22,9 +26,7 @@ From the repository root, PowerShell:
 ```powershell
 py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
-# Optional: copy only when you do not already have a local .env.
-Copy-Item .env.example .env
-# Supply AFN_DEMO_TOKEN privately in .env or this process environment.
+$env:AFN_ENVIRONMENT = 'demo'
 cd backend
 ..\.venv\Scripts\python.exe -m app
 ```
@@ -34,7 +36,7 @@ On Linux/macOS (Python 3.13 installed):
 ```sh
 python3.13 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.txt
-cp -n .env.example .env
+export AFN_ENVIRONMENT=demo
 cd backend
 ../.venv/bin/python -m app
 ```
@@ -56,11 +58,13 @@ Explicit CLI bind options override settings. Keep this local service on loopback
 | --- | --- |
 | AFN_HOST | 127.0.0.1; loopback only |
 | AFN_PORT | 8000; 1–65535 |
-| AFN_ENVIRONMENT | demo; alternatives dev/test |
+| AFN_ENVIRONMENT | production in the deployment template; demo mode when unset |
 | AFN_PREDICTOR_MODE | real; mock requires dev/test |
-| AFN_DEMO_TOKEN | Unset; every prediction gets 401 until configured, including mock |
+| AFN_DEMO_TOKEN | Required for production startup and for authenticated predictions |
 | AFN_EXTENSION_ORIGIN | Unset; enforcement remains #38 |
-| AFN_MODEL_ARTIFACT_PATH | artifacts/model relative to repo; no loader yet |
+| AFN_MODEL_ARTIFACT_PATH | Multimodal bundle directory, relative to repo or absolute. The deployment template uses backend/artifacts/multimodal |
+| AFN_MODEL_METADATA_SHA256 | SHA-256 of the exact bundle metadata.json, required in production |
+| AFN_ALLOW_CANDIDATE_MODEL | False by default. Set to true to deploy a pinned real candidate |
 | AFN_MAX_REQUEST_BYTES | Enforced 12 MiB total body default; configurable above 10 MiB |
 
 POST /predict requires X-Demo-Token, UUID, nonblank text (<=50,000 code points), optional
@@ -73,23 +77,27 @@ Image validation uses the unchanged shared ML preprocessing helper from PR #68 f
 Pillow/NumPy are pinned to that ML manifest. Predictor retains original encoded bytes.
 Do not log settings, credentials, articles/images, model exceptions or local artifact paths.
 
+For real mode, install `backend/requirements.txt` and `ml/requirements.txt` into the same
+environment, cache the pinned CLIP checkpoint and set `AFN_MODEL_ARTIFACT_PATH` to the
+trusted local bundle directory. Startup validates the bundle, loads CLIP offline and warms up
+the Predictor. See [bundle setup and lifecycle](docs/model-bundle.md).
+
 ## Verification
 
-From backend, using the same environment:
+From the repository root, using the configured Python environment:
 
-```powershell
-..\.venv\issue9\Scripts\python.exe -m pytest -q
-..\.venv\issue9\Scripts\python.exe -m pip check
-..\.venv\issue9\Scripts\python.exe tests/smoke_local.py
-..\.venv\issue9\Scripts\python.exe tests/smoke_local.py --mode mock
+```sh
+python -m pytest -q tests/test_model_loader.py backend/tests/test_inference_adapter.py
+python scripts/test_extension_smoke.py
 ```
 
-Run smoke commands sequentially; each reserves port 8000, creates an ephemeral token and
-synthetic PNG, and stops its own server. They do not test trained-model accuracy.
-Requirements pin runtime, image helper and test dependencies; no configured lint/type checker.
+The browser smoke uses temporary loopback servers, an ephemeral token and synthetic inputs.
+See [Extension smoke setup](docs/extension-w1.md) for Playwright and Chromium.
 
 ## Contracts and scope
 
+- [Backend package and offline setup](docs/backend-setup.md)
+- [Data card](docs/data-card.md) and [data rebuild](docs/rebuild-data.md)
 - [API contract v0.2.0](docs/api-contract.md)
 - [Predictor/shared preprocessing](docs/inference-interface.md)
 - [Explicit mock usage and historical AFN-009 evidence](docs/dev-mock.md)
@@ -97,6 +105,5 @@ Requirements pin runtime, image helper and test dependencies; no configured lint
 - [Historical AFN-007/008 evidence](docs/implementation-issues-7-8.md)
 - Project context: [DEFINE.md](DEFINE.md), [DESIGN.md](DESIGN.md)
 
-#37 model loading, #38 CORS/warm-up and #39 integration remain deferred; #28 QA-owned work
-is untouched. Real ML inference and browser cross-origin integration are not implemented here.
-Code verification does not replace ML/Extension review or authorize closing GitHub issues.
+Candidate parity through the deployed Predictor and end-to-end QA remain in
+#37–39. See the [week 2 checkpoint](reports/week-2-gate.md) for review status.

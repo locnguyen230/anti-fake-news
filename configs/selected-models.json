@@ -1,14 +1,14 @@
 {
   "schema": "afn-selected-models-v1",
   "status": "candidate",
-  "run_id": "20261125T145232Z",
+  "run_id": "20261126T024649Z",
   "evidence_kind": "VALIDATION_ONLY",
   "selection_split": "validation",
   "metric": "macro_f1",
   "inputs": {
     "manifest_sha256": "a42af272426dc73019dd1f7b010de9feb1f3fb67f8b2740c672f6a34a237f44a",
     "split_sha256": "81058045c8397ed9cce8645267466e79a2fc346606865e05ade9b303b77b9c1f",
-    "experiment_config_sha256": "11dab478d6838c5872a2446d01d950382a51c4265298319d03cdb472f3aa29a8"
+    "experiment_config_sha256": "dd4da7bde49905e06d6e89dc9e1a7ff3518bc2cabde424d798bb85d19e805298"
   },
   "test_split": {
     "loaded": false,

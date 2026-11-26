@@ -99,7 +99,7 @@ def test_real_factory_never_loads_mock_or_infers_readiness(tmp_path, monkeypatch
         path.write_text("not-a-model", encoding="utf-8")
     adapter = create_adapter(Settings(_env_file=None, model_artifact_path=path))
     assert adapter.mode == "real"
-    assert adapter.state == ModelState.NOT_LOADED
+    assert adapter.state == ModelState.ERROR
 
 
 def test_mock_factory_failure_stays_error(monkeypatch):
@@ -111,3 +111,58 @@ def test_mock_factory_failure_stays_error(monkeypatch):
     monkeypatch.setattr(mock_predictor, "MockPredictor", failing_factory)
     adapter = create_adapter(Settings(_env_file=None, environment="test", predictor_mode="mock"))
     assert adapter.state == ModelState.ERROR
+
+
+def test_adapter_disposes_provider_on_close_and_runtime_error():
+    closed = []
+
+    class ClosableProvider:
+        def __init__(self, fail_predict=False):
+            self.fail_predict = fail_predict
+
+        def predict(self, inputs):
+            if self.fail_predict:
+                raise RuntimeError("private runtime failure")
+            return MockPredictor().predict(inputs)
+
+        def close(self):
+            closed.append(self.fail_predict)
+
+    adapter = InferenceAdapter(mode="real")
+    adapter.initialize(lambda: ClosableProvider(fail_predict=False))
+    adapter.close()
+    assert closed == [False] and adapter.state == ModelState.NOT_LOADED
+
+    adapter.initialize(lambda: ClosableProvider(fail_predict=True))
+    with pytest.raises(ModelNotReadyError):
+        adapter.predict(sample_input())
+    assert closed == [False, True] and adapter.state == ModelState.ERROR
+
+
+def test_adapter_serializes_concurrent_predictions():
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Lock
+    import time
+
+    state_lock = Lock()
+    active = 0
+    max_active = 0
+
+    class SlowProvider:
+        def predict(self, inputs):
+            nonlocal active, max_active
+            with state_lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.02)
+            with state_lock:
+                active -= 1
+            return MockPredictor().predict(inputs)
+
+    adapter = InferenceAdapter(mode="real")
+    adapter.initialize(SlowProvider)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda _: adapter.predict(sample_input()), range(4)))
+    assert len(results) == 4
+    assert max_active == 1
+    adapter.close()
