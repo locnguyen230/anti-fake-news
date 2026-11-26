@@ -1,13 +1,14 @@
 # Kết nối Extension với Backend cục bộ — AFN-027
 
-Trang phân tích có địa chỉ dịch vụ, token demo và thời gian chờ. Dùng
-http://127.0.0.1:8000 hoặc đổi cổng theo Backend. Token nằm trong trường mật khẩu
-của tab và được gửi bằng X-Demo-Token khi bấm **Phân tích**. Nút **Kiểm tra kết nối**
-dùng GET /health và không gửi token. Thời gian chờ mặc định là 30 giây.
+Mở **Kết nối Backend** trong popup để nhập địa chỉ dịch vụ, token demo và thời gian
+chờ. Dùng `http://127.0.0.1:8000` hoặc đổi cổng theo Backend. Khi bấm **Phân tích**,
+tiện ích lưu cấu hình trong phiên trình duyệt và gửi token qua `X-Demo-Token`.
+Thời gian chờ mặc định là 30 giây.
 
-Mở hình ảnh hoặc tải tệp JPEG/PNG, nhập phần thân bài rồi bấm **Phân tích**. Trang
-tạo UUID và gửi multipart để trình duyệt tự đặt boundary. Service worker không
-gửi request. Tab giữ tệp trong bộ nhớ để thử lại.
+Popup lấy nội dung từ tab đang xem và dùng ảnh JPEG/PNG đầu tiên tải được từ bài.
+Điểm `fake_score` được hiển thị theo phần trăm cùng nhãn dự đoán của Backend.
+Dùng **Phân tích thủ công** để sửa nội dung, tải ảnh lên hoặc gọi `GET /health`
+qua nút **Kiểm tra kết nối**. Trang thủ công giữ tệp trong bộ nhớ để thử lại.
 
 Để phát triển nội bộ, xem [cách bật mock](dev-mock.md). Backend mock được đánh dấu
 trên giao diện. Từ hợp đồng v0.2.0, cả chế độ mock và real đều yêu cầu nhập token

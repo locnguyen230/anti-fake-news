@@ -3,10 +3,18 @@ import { createApiClient } from './modules/api-client.js';
 import { createFormState } from './modules/form-state.js';
 import { bindFormValidation } from './modules/form-validation.js';
 import { createImageSelection } from './modules/image-selection.js';
-import { readSession } from './modules/session.js';
+import { readConnection, readSession } from './modules/session.js';
 
 const get = id => document.getElementById(id);
-const session = await readSession(location.search).catch(() => null);
+const [session, config] = await Promise.all([
+  readSession(location.search).catch(() => null),
+  readConnection().catch(() => null),
+]);
+if (config) {
+  get('endpoint').value = config.endpoint;
+  get('demo-token').value = config.demoToken;
+  get('timeout').value = config.timeoutMs;
+}
 const extractionMessages = {
   dom: 'Rà lại văn bản đã lấy từ trang. Bạn có thể chỉnh sửa bên dưới.',
   empty: 'Chưa tìm thấy nội dung bài viết. Bạn có thể nhập hoặc dán văn bản, hoặc mở lại tiện ích khi bài đã tải xong.',

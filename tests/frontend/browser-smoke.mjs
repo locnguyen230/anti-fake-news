@@ -22,6 +22,17 @@ const mediaTypes = new Map([
   ['/synthetic.png', 'image/png'],
 ]);
 const server = createServer(async (request, response) => {
+  if (request.method === 'POST' && request.url === '/predict') {
+    request.setEncoding('utf8');
+    let body = '';
+    for await (const chunk of request) body += chunk;
+    const requestId = body.match(/name="request_id"\r\n\r\n([0-9a-f-]+)/i)?.[1];
+    response.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({
+      request_id: requestId, label: 'fake', fake_score: 0.4325, model_id: 'test-model',
+      model_version: 'v1', processing_time_ms: 2, text_truncated: false,
+    }));
+    return;
+  }
   const mediaType = mediaTypes.get(request.url);
   if (!mediaType) {
     response.writeHead(404).end();
@@ -41,6 +52,7 @@ try {
   await once(server, 'listening');
   const origin = 'http://127.0.0.1:' + server.address().port;
   const manifest = JSON.parse(await readFile(join(extension, 'manifest.json'), 'utf8'));
+  assert.equal(manifest.action.default_popup, 'popup.html');
   assert.deepEqual(manifest.permissions, ['activeTab', 'scripting', 'storage']);
   assert.deepEqual(manifest.host_permissions, ['http://127.0.0.1/*']);
   context = await chromium.launchPersistentContext(profile, {
@@ -58,16 +70,75 @@ try {
   const { product } = await browserSession.send('Browser.getVersion');
   console.log('Browser unpacked smoke: ' + product);
 
-  async function openAnalysis(source) {
+  async function openPopup(source) {
     await source.bringToFront();
+    if (source.url().startsWith(origin + '/')) {
+      await poll(() => worker.evaluate(async url => {
+        const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        return activeTab?.url === url;
+      }, source.url()), 'source tab to become active');
+    }
     const { targetInfos } = await browserSession.send('Target.getTargets', {
       filter: [{ type: 'tab' }, { exclude: true }],
     });
     const tab = targetInfos.find(target => target.url === source.url());
     assert.ok(tab, 'Chrome tab target for ' + source.url());
+    await browserSession.send('Extensions.triggerAction', { id: extensionId, targetId: tab.targetId });
+    const popupUrl = 'chrome-extension://' + extensionId + '/' + manifest.action.default_popup;
+    const popup = await poll(async () => {
+      const { targetInfos } = await browserSession.send('Target.getTargets', { filter: [{ type: 'page' }] });
+      return targetInfos.find(target => target.url === popupUrl);
+    }, 'native toolbar popup');
+    const { sessionId } = await browserSession.send('Target.attachToTarget', { targetId: popup.targetId });
+    let nextId = 0;
+    // Playwright does not expose the toolbar bubble through BrowserContext.pages().
+    async function evaluate(fn, args) {
+      const id = ++nextId;
+      const reply = await new Promise((resolve, reject) => {
+        const eventName = 'Target.receivedMessageFromTarget';
+        function finish(error, result) {
+          clearTimeout(timer);
+          browserSession.off(eventName, receive);
+          if (error) reject(error);
+          else resolve(result);
+        }
+        function receive(event) {
+          if (event.sessionId !== sessionId) return;
+          const message = JSON.parse(event.message);
+          if (message.id === id) finish(null, message);
+        }
+        const timer = setTimeout(() => finish(Error('Popup evaluation timed out')), 7000);
+        browserSession.on(eventName, receive);
+        browserSession.send('Target.sendMessageToTarget', {
+          sessionId,
+          message: JSON.stringify({
+            id, method: 'Runtime.evaluate',
+          params: { expression: '(' + fn + ')(' + JSON.stringify(args) + ')', returnByValue: true, awaitPromise: true },
+          }),
+        }).catch(finish);
+      });
+      assert.ok(!reply.error && !reply.result.exceptionDetails, JSON.stringify(reply));
+      return reply.result.result.value;
+    }
+    await poll(() => evaluate(() => document.querySelector('#predict')?.disabled === false), 'popup initialization');
+    return { evaluate, close: () => browserSession.send('Target.closeTarget', { targetId: popup.targetId }) };
+  }
+
+  async function poll(check, description) {
+    const deadline = Date.now() + 7000;
+    do {
+      const result = await check();
+      if (result) return result;
+      await delay(50);
+    } while (Date.now() < deadline);
+    assert.fail('Timed out waiting for ' + description);
+  }
+
+  async function openAnalysis(source) {
+    const popup = await openPopup(source);
     const [page] = await Promise.all([
       context.waitForEvent('page'),
-      browserSession.send('Extensions.triggerAction', { id: extensionId, targetId: tab.targetId }),
+      popup.evaluate(() => document.querySelector('#manual').click()),
     ]);
     await page.waitForFunction(() => document.querySelector('#draft')?.disabled === false);
     return page;
@@ -79,6 +150,38 @@ try {
 
   const article = await context.newPage();
   await article.goto(origin + '/article.html');
+  const popup = await openPopup(article);
+  await popup.evaluate(() => document.querySelector('#predict').click());
+  assert.equal(await popup.evaluate(() => document.querySelector('#settings').open), true);
+  assert.equal(await popup.evaluate(() => document.querySelector('#prediction').hidden), true);
+  await popup.evaluate(endpoint => {
+    document.querySelector('#endpoint').value = endpoint;
+    document.querySelector('#demo-token').value = 'fixture-token';
+    document.querySelector('#predict').click();
+  }, origin);
+  await poll(() => popup.evaluate(() => !document.querySelector('#prediction').hidden), 'fake prediction');
+  assert.deepEqual(await popup.evaluate(() => [
+    document.querySelector('#score').innerText,
+    document.querySelector('#verdict').innerText,
+    document.querySelector('#context').hidden,
+  ]), ['43,25%', 'Fake', true]);
+  console.log('PASS native popup formats fake_score and uses the returned Fake label');
+  if (process.env.AFN_MOCK_TEST_URL) {
+    await popup.evaluate(({ endpoint, token }) => {
+      document.querySelector('#endpoint').value = endpoint;
+      document.querySelector('#demo-token').value = token;
+      document.querySelector('#predict').click();
+    }, { endpoint: process.env.AFN_MOCK_TEST_URL, token: process.env.AFN_LOCAL_TEST_TOKEN });
+    await poll(() => popup.evaluate(() => !document.querySelector('#prediction').hidden), 'popup prediction');
+    assert.deepEqual(await popup.evaluate(() => [
+      document.querySelector('#score').innerText,
+      document.querySelector('#verdict').innerText,
+      document.querySelector('#context').innerText,
+      document.querySelector('#settings').open,
+    ]), ['42%', 'Real', 'Kết quả giả lập', false]);
+    console.log('PASS native popup uses the article image and shows the Backend mock score and label');
+  }
+  await popup.close();
   const analysis = await openAnalysis(article);
   const sessionKey = 'analysis:' + sessionId(analysis);
   const storedSession = await worker.evaluate(async key => (await chrome.storage.session.get(key))[key], sessionKey);

@@ -55,8 +55,8 @@ Trong terminal khác, chạy `curl.exe -i http://127.0.0.1:8000/health`. Kỳ v�
    & $AfnPython -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/pages
    ```
 
-3. Mở [bài mẫu](http://127.0.0.1:8765/article.html) và bấm biểu tượng **Anti Fake News**. Tab phân tích sẽ điền tiêu đề và phần thân bài từ trang mẫu. Chọn ảnh được gợi ý hoặc tải lên `tests/fixtures/pages/synthetic.png`.
-4. Điền địa chỉ Backend `http://127.0.0.1:8000` và token ở bước 2. Bấm **Kiểm tra kết nối**, sau đó bấm **Phân tích**. Mock trả kết quả cố định với model ID `dev-mock-not-a-model` và giao diện đánh dấu đây là kết quả thử.
+3. Mở [bài mẫu](http://127.0.0.1:8765/article.html) và bấm biểu tượng **Anti Fake News**. Trong **Kết nối Backend**, điền địa chỉ `http://127.0.0.1:8000` và token ở bước 2.
+4. Bấm **Phân tích** để popup lấy văn bản và ảnh từ bài mẫu. Backend mock trả điểm `42%` và nhãn `Real` kèm dòng **Kết quả giả lập**. Dùng **Phân tích thủ công** để sửa văn bản, chọn ảnh khác hoặc kiểm tra kết nối.
 
 Để tạo thư mục cài đặt độc lập từ gốc repo, chạy `& $AfnPython scripts/package_extension.py`, rồi chọn `release/extension/` khi **Load unpacked**. Nếu thư mục đầu ra đã chứa bản cũ, dùng `--output cache/extension-next` để tạo bản mới.
 

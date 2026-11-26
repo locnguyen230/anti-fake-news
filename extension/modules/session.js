@@ -1,4 +1,10 @@
 export const SESSION_VERSION = 1;
+export const CONNECTION_KEY = 'analysis-connection';
+
+export async function readConnection() {
+  const { [CONNECTION_KEY]: config } = await chrome.storage.session.get(CONNECTION_KEY);
+  return config;
+}
 
 export function sessionKey(sessionId) {
   return 'analysis:' + sessionId;

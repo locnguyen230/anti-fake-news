@@ -1,3 +1,4 @@
+import json
 import shutil
 import tempfile
 import unittest
@@ -22,6 +23,10 @@ class PackageExtensionTest(unittest.TestCase):
                 self.assertEqual(first_count, package_extension.build_extension(output))
                 self.assertFalse((output / "modules" / "local-fixture.js").exists())
                 self.assertFalse((output / "local-fixture.json").exists())
+                manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+                self.assertTrue((output / manifest["action"]["default_popup"]).is_file())
+                self.assertTrue((output / "popup.js").is_file())
+                self.assertTrue((output / "styles" / "popup.css").is_file())
                 self.assertTrue((output / "modules" / "result-view.js").is_file())
                 self.assertTrue((output / "styles" / "results.css").is_file())
                 local = output / "local-note.txt"

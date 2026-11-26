@@ -3,14 +3,14 @@
 ## Chạy thử
 
 1. Mở `chrome://extensions`, bật **Developer mode**, chọn **Load unpacked** và trỏ vào thư mục `extension`.
-2. Từ gốc repo, chạy `python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/pages`. Mở `http://127.0.0.1:8765/article.html` rồi bấm **Anti Fake News**. Trang phân tích hiện nguồn, tiêu đề, thân bài có thể chỉnh sửa và URL ảnh tìm thấy.
+2. Từ gốc repo, chạy `python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/pages`. Mở `http://127.0.0.1:8765/article.html`, bấm **Anti Fake News** rồi chọn **Phân tích thủ công** trong popup. Trang phân tích hiện nguồn, tiêu đề, thân bài có thể chỉnh sửa và URL ảnh tìm thấy.
 3. Mở `dynamic.html` trước và sau khi bấm **Hiện bài mẫu**. Mở lại tiện ích sau khi nội dung xuất hiện để lấy ảnh chụp DOM mới. Thử trên `chrome://version/` để xem đường nhập thủ công khi không đọc được tab nguồn.
 
 Mẫu bài và ảnh trong `tests/fixtures/pages` được tạo cho kiểm thử. Chức năng tuần 1 chạy độc lập với backend.
 
 ## Hợp đồng phiên
 
-Worker tạo UUID mới mỗi lần bấm, truyền qua `analyze.html?session=<id>`, rồi trang đọc bản ghi `analysis:<id>` qua `readSession(location.search)` trong `modules/session.js`. Schema v1 gồm các trường sau.
+Khi chọn **Phân tích thủ công**, worker tạo UUID và truyền qua `analyze.html?session=<id>`, rồi trang đọc bản ghi `analysis:<id>` qua `readSession(location.search)` trong `modules/session.js`. Schema v1 gồm các trường sau.
 
 | Trường | Giá trị |
 | --- | --- |

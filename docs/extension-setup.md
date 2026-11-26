@@ -9,12 +9,16 @@
    rồi chọn thư mục đã tạo. Ghi lại ID hiển thị bên dưới tiện ích.
 3. Origin của gói là `chrome-extension://<ID>`. Dùng giá trị này cho
    `AFN_EXTENSION_ORIGIN` trong cấu hình Backend khi hỗ trợ CORS của #38 đã có.
-   Khởi động Backend tại `127.0.0.1` và nhập đúng cổng trong trang phân tích.
-4. Dùng **Kiểm tra kết nối** để kiểm tra /health. Chỉ demo suy luận thật khi
+   Khởi động Backend tại `127.0.0.1`.
+4. Mở một bài viết, bấm biểu tượng **Anti Fake News**, rồi mở **Kết nối Backend**
+   để nhập địa chỉ và token demo. Bấm **Phân tích** để xem điểm `fake_score`
+   theo phần trăm và nhãn **Fake** hoặc **Real**.
+5. Dùng **Phân tích thủ công** để chỉnh văn bản, chọn ảnh hoặc **Kiểm tra kết nối**.
+   Chỉ demo suy luận thật khi
    Backend chạy mode real, đã nạp artifact đã khóa và trả `model_ready=true`.
 
-Gói chỉ lấy mã MV3 và tệp giao diện trong danh sách runtime của script đóng gói. Token demo nhập trong tab, được cấp
-riêng từ cấu hình Backend. Xem [kết nối API](extension-config.md) và
+Gói chỉ lấy mã MV3 và tệp giao diện trong danh sách runtime của script đóng gói.
+Xem [kết nối API](extension-config.md) và
 [kịch bản demo](demo-script.md). Phát hành theo mô hình unpacked của dự án.
 
 ## Kiểm tra trên máy khác

@@ -11,6 +11,9 @@ SOURCE = ROOT / "extension"
 DEFAULT_OUTPUT = ROOT / "release" / "extension"
 TOP_LEVEL = (
     "manifest.json",
+    "popup.html",
+    "popup.js",
+    "styles/popup.css",
     "analyze.html",
     "analyze.js",
     "extract.js",

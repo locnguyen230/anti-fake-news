@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 
-function configForRequest(config) {
+export function validateConnection(config) {
   let url;
   try { url = new URL(config.endpoint.trim()); } catch { throw new ApiError('config'); }
   if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.pathname !== '/'
@@ -31,7 +31,7 @@ function isPrediction(data) {
 
 export function createApiClient(fetchTransport = globalThis.fetch) {
   async function request(config, path, options = {}, signal) {
-    const { base, timeoutMs } = configForRequest(config);
+    const { base, timeoutMs } = validateConnection(config);
     if (signal?.aborted) throw new ApiError('aborted');
     const controller = new AbortController();
     const abort = () => controller.abort();
