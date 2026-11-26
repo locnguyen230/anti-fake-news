@@ -16,6 +16,7 @@ RUNTIME_FILES = (
     "backend/app/errors.py",
     "backend/app/image_validation.py",
     "backend/app/inference_adapter.py",
+    "backend/app/lifespan.py",
     "backend/app/main.py",
     "backend/app/model_bundle.py",
     "backend/app/model_loader.py",
