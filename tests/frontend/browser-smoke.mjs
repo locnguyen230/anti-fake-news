@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.AFN_PLAYWRIGHT_PATH || 'playwright');
@@ -30,7 +30,7 @@ const server = createServer(async (request, response) => {
   }
   try {
     const content = await readFile(join(fixtures, request.url.slice(1)));
-    response.writeHead(200, { 'Content-Type': mediaType, 'Access-Control-Allow-Origin': '*' }).end(content);
+    response.writeHead(200, { 'Content-Type': mediaType }).end(content);
   } catch {
     response.writeHead(500).end();
   }
@@ -108,6 +108,56 @@ async function analyze(popup) {
   }));
 }
 
+async function checkPublisherExtraction(page) {
+  const { extractArticle } = await import(pathToFileURL(join(extension, 'extract.js')).href);
+  const structures = [
+    ['www.reuters.com', '<div class="article-module__main__1N9VH">', '</div>'],
+    ['www.reuters.com', '<div class="article-module__main__newHash">', '</div>'],
+    ['edition.cnn.com', '<div class="article__content-container">', '</div>'],
+    ['www.bbc.co.uk', '<main><article>', '</article></main>'],
+    ['apnews.com', '<div class="RichTextStoryBody">', '</div>'],
+    ['www.theguardian.com', '<div data-gu-name="body">', '</div>'],
+    ['www.aljazeera.com', '<div class="wysiwyg">', '</div>'],
+    ['abcnews.com', '<div data-testid="prism-article-body">', '</div>'],
+  ];
+  for (const [host, opening, closing] of structures) {
+    const url = 'https://' + host + '/synthetic-check';
+    await page.route(url, route => route.fulfill({
+      contentType: 'text/html',
+      body: `<article><p>${'Unrelated outside text. '.repeat(10)}</p></article>
+        ${opening}<p>First article paragraph.</p><p>Second article paragraph.</p>
+        <div class="related-content"><p>Related article excerpt.</p></div>${closing}`,
+    }), { times: 1 });
+    await page.goto(url);
+    assert.equal((await page.evaluate(extractArticle)).text, 'First article paragraph.\n\nSecond article paragraph.', host);
+  }
+
+  const genericUrl = 'https://reuters.com.example.test/synthetic-check';
+  await page.route(genericUrl, route => route.fulfill({
+    contentType: 'text/html',
+    body: `<meta property="og:image" content="/logo.png">
+      <script type="application/ld+json">{ "broken": }</script>
+      <script type="application/ld+json">
+        {"@graph":[{"@type":"Organization","image":"/publisher.png"},
+        {"@type":["NewsArticle"],"headline":"Main title","image":[{"contentUrl":"../cover.jpg"}]}]}
+      </script>
+      <main><div class="article-module__main__1N9VH"><p>Unrelated caption.</p></div>
+      <section><p>First main paragraph with meaningful editorial text.</p>
+      <p>Second main paragraph with enough editorial content.</p>
+      <p><a href="/another">Entirely linked promotion</a></p>
+      <figure><img alt="Lazy article image" data-srcset="/small.jpg 320w, /fallback.jpg 1200w"></figure>
+      <aside><p>Outside text.</p></aside></section></main>`,
+  }), { times: 1 });
+  await page.route(url => url.hostname === 'reuters.com.example.test' && url.pathname !== '/synthetic-check',
+    route => route.fulfill({ status: 404 }));
+  await page.goto(genericUrl);
+  const generic = await page.evaluate(extractArticle);
+  assert.equal(generic.title, 'Main title');
+  assert.equal(generic.text, 'First main paragraph with meaningful editorial text.\n\nSecond main paragraph with enough editorial content.');
+  assert.deepEqual(generic.candidateImages.map(({ url }) => new URL(url).pathname), ['/cover.jpg', '/fallback.jpg']);
+  console.log('PASS publisher selectors, generic paragraph fallback and cover image priorities');
+}
+
 let context;
 try {
   server.listen(0, '127.0.0.1');
@@ -116,7 +166,18 @@ try {
   const manifest = JSON.parse(await readFile(join(extension, 'manifest.json'), 'utf8'));
   assert.equal(manifest.action.default_popup, 'popup.html');
   assert.deepEqual(manifest.permissions, ['activeTab', 'scripting']);
-  assert.deepEqual(manifest.host_permissions, ['http://127.0.0.1/*']);
+  assert.deepEqual(manifest.host_permissions, [
+    'http://127.0.0.1/*',
+    'https://www.reuters.com/*',
+    'https://*.reutersmedia.net/*',
+    'https://cloudfront-us-east-2.images.arcpublishing.com/*',
+    'https://media.cnn.com/*',
+    'https://ichef.bbci.co.uk/*',
+    'https://dims.apnews.com/*',
+    'https://i.guim.co.uk/*',
+    'https://www.aljazeera.com/*',
+    'https://i.abcnewsfe.com/*',
+  ]);
 
   context = await chromium.launchPersistentContext(profile, {
     channel: 'chromium',
@@ -205,6 +266,13 @@ try {
     assert.match(unavailable.status, /cần có ảnh JPEG hoặc PNG/u);
     await noImage.close();
     console.log('PASS missing content and missing image report clear popup errors');
+
+    await source.goto('http://localhost:' + server.address().port + '/article.html');
+    const genericPopup = await openPopup(cdp, id, source, manifest.action.default_popup);
+    assert.equal((await analyze(genericPopup)).status, '');
+    await genericPopup.close();
+
+    await checkPublisherExtraction(source);
   }
 } finally {
   await context?.close();
