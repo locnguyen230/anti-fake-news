@@ -1,6 +1,7 @@
-# AFN-004. Review this configuration with Integration and ML before locking it.
+# AFN-004. Locked on 2026-11-26 before the AFN-049 freeze; changing any value
+# after this point requires a new Train/Validation run and a new freeze record.
 version: 1
-status: proposed
+status: locked
 seed: 42
 input_language: en
 configurations:
@@ -37,8 +38,7 @@ logistic_regression:
   random_state: 42
 fit_split: train
 refit_on_train_and_validation: false
-# Feature parameters added by ML for AFN-019/020/021 (values from the issues);
-# Integration to confirm together with the rest of this proposed protocol.
+# Feature parameters added by ML for AFN-019/020/021 (values from the issues).
 text_features:
   ngram_range: [1, 2]
   max_features: 5000
