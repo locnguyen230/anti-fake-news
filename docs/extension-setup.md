@@ -21,6 +21,13 @@ Gói unpacked chứa token dùng với Backend cục bộ. Giữ gói trên máy
 Xem [kết nối API](extension-config.md) và
 [kịch bản demo](demo-script.md). Phát hành theo mô hình unpacked của dự án.
 
+## Tiện ích đã được nạp từ thư mục mã nguồn
+
+Nếu Chrome đang nạp trực tiếp thư mục `extension/`, chạy
+`python scripts/package_extension.py --configure-source` từ gốc repo. Script ghi
+cấu hình cục bộ vào đúng thư mục đang nạp. Mở lại popup để phân tích. Chạy lại
+lệnh khi đổi token hoặc cổng Backend.
+
 ## Kiểm tra trên máy khác
 
 Sau khi cài dependencies Backend và Playwright theo

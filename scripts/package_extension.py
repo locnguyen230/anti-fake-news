@@ -59,6 +59,19 @@ def config_from_environment():
     return runtime_config(token, port)
 
 
+def configure_source(config):
+    destination = SOURCE / RUNTIME_CONFIG
+    if destination.is_symlink():
+        raise ValueError("Choose an extension configuration file without a symlink")
+    if destination.is_file() and destination.read_bytes() == config:
+        return
+
+    with TemporaryDirectory(prefix=".afn-config-", dir=SOURCE) as temporary:
+        staged = Path(temporary) / RUNTIME_CONFIG
+        staged.write_bytes(config)
+        staged.replace(destination)
+
+
 def up_to_date(output, files, config):
     if not output.is_dir() or output.is_symlink():
         return False
@@ -99,10 +112,19 @@ def build_extension(output, config):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    destination = parser.add_mutually_exclusive_group()
+    destination.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    destination.add_argument(
+        "--configure-source", action="store_true", help="Configure an existing unpacked install from extension/"
+    )
     args = parser.parse_args()
     try:
-        count = build_extension(args.output, config_from_environment())
+        config = config_from_environment()
+        if args.configure_source:
+            configure_source(config)
+            print(f"Unpacked Chromium source configured: {SOURCE}")
+            return
+        count = build_extension(args.output, config)
     except (OSError, ValueError) as error:
         parser.exit(1, f"{error}\n")
     print(f"Unpacked Chromium extension: {args.output.resolve()} ({count} files)")

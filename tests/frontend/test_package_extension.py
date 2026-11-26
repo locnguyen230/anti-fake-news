@@ -9,6 +9,22 @@ from scripts import package_extension
 
 
 class PackageExtensionTest(unittest.TestCase):
+    def test_configure_source_adds_and_refreshes_only_the_runtime_config(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            manifest = source / "manifest.json"
+            manifest.write_text("{}", encoding="utf-8")
+            with patch.object(package_extension, "SOURCE", source):
+                original = package_extension.runtime_config("original")
+                updated = package_extension.runtime_config("rotated", 9000)
+                package_extension.configure_source(original)
+                destination = source / package_extension.RUNTIME_CONFIG
+                self.assertEqual(destination.read_bytes(), original)
+                package_extension.configure_source(updated)
+                self.assertEqual(destination.read_bytes(), updated)
+                self.assertEqual(set(source.iterdir()), {manifest, destination})
+                self.assertEqual(manifest.read_text(encoding="utf-8"), "{}")
+
     def test_build_uses_only_the_runtime_allowlist_and_repeats_without_overwriting_extras(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
