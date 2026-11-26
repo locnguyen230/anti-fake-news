@@ -2,15 +2,14 @@
 
 ## Chạy thử
 
-1. Mở `chrome://extensions`, bật **Developer mode**, chọn **Load unpacked** và trỏ vào thư mục `extension`.
-2. Từ gốc repo, chạy `python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/pages`. Mở `http://127.0.0.1:8765/article.html` rồi bấm **Anti Fake News**. Trang phân tích hiện nguồn, tiêu đề, thân bài có thể chỉnh sửa và URL ảnh tìm thấy.
-3. Mở `dynamic.html` trước và sau khi bấm **Hiện bài mẫu**. Mở lại tiện ích sau khi nội dung xuất hiện để lấy ảnh chụp DOM mới. Thử trên `chrome://version/` để xem đường nhập thủ công khi không đọc được tab nguồn.
+Đóng gói, cài đặt và chạy popup hiện tại theo [hướng dẫn](extension-setup.md).
+Mẫu bài và ảnh trong `tests/fixtures/pages` được tạo cho kiểm thử.
 
-Mẫu bài và ảnh trong `tests/fixtures/pages` được tạo cho kiểm thử. Chức năng tuần 1 chạy độc lập với backend.
+## Hợp đồng phiên của giao diện tuần 1
 
-## Hợp đồng phiên
-
-Worker tạo UUID mới mỗi lần bấm, truyền qua `analyze.html?session=<id>`, rồi trang đọc bản ghi `analysis:<id>` qua `readSession(location.search)` trong `modules/session.js`. Schema v1 gồm các trường sau.
+Trong giao diện tuần 1, thao tác bấm biểu tượng tiện ích kích hoạt worker tạo UUID
+và truyền qua `analyze.html?session=<id>`. Trang đọc bản ghi `analysis:<id>` qua
+`readSession(location.search)` trong `modules/session.js`. Schema v1 gồm các trường sau.
 
 | Trường | Giá trị |
 | --- | --- |
@@ -36,10 +35,11 @@ $playwrightDir = Join-Path ([IO.Path]::GetTempPath()) 'afn-extension-playwright'
 npm install --prefix $playwrightDir playwright --no-audit --no-fund
 & (Join-Path $playwrightDir 'node_modules/.bin/playwright.cmd') install chromium
 $env:AFN_PLAYWRIGHT_PATH = Join-Path $playwrightDir 'node_modules/playwright'
-node tests/frontend/browser-smoke.mjs
+python scripts/test_extension_smoke.py
 ```
 
-Browser smoke tải trực tiếp thư mục `extension` vào Chromium và dùng DevTools để kích hoạt action ở từng tab. QA review của `dangnguyen0512` vẫn đang chờ. [Tài liệu về thao tác kích hoạt action trong Chrome](https://pptr.dev/guides/chrome-extensions#triggering-extension-action).
+Browser smoke nạp gói tạm vào Chromium và dùng DevTools để kích hoạt popup.
+[Tài liệu về thao tác kích hoạt action trong Chrome](https://chromedevtools.github.io/devtools-protocol/tot/Extensions/).
 
 ### Bàn giao phiên AFN-010
 

@@ -1,33 +1,32 @@
 """Build a local, unpacked Chromium extension from versioned sources."""
 
 import argparse
+import json
+import os
 from pathlib import Path
 import shutil
 from tempfile import TemporaryDirectory
+
+from dotenv import dotenv_values
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "extension"
 DEFAULT_OUTPUT = ROOT / "release" / "extension"
+RUNTIME_CONFIG = Path("afn-runtime-config.json")
 TOP_LEVEL = (
     "manifest.json",
-    "analyze.html",
-    "analyze.js",
+    "popup.html",
+    "popup.js",
+    "styles/popup.css",
     "extract.js",
-    "service-worker.js",
-    "styles.css",
-    "styles/results.css",
 )
 MODULES = (
-    "analysis-controller.js",
     "api-client.js",
     "error-recovery.js",
-    "form-state.js",
-    "form-validation.js",
     "image-selection.js",
     "request-lifecycle.js",
     "result-view.js",
-    "session.js",
 )
 
 
@@ -41,22 +40,53 @@ def source_files():
     return files
 
 
-def up_to_date(output, files):
+def runtime_config(token, port=8000):
+    if not token or not token.strip() or token != token.strip():
+        raise ValueError("Set a valid AFN_DEMO_TOKEN in the environment or the repository .env")
+    if not 1 <= port <= 65535:
+        raise ValueError("AFN_PORT must be between 1 and 65535")
+
+    return json.dumps({"endpoint": f"http://127.0.0.1:{port}", "demoToken": token}).encode("utf-8")
+
+
+def config_from_environment():
+    env_file = dotenv_values(ROOT / ".env", encoding="utf-8")
+    token = os.environ.get("AFN_DEMO_TOKEN", env_file.get("AFN_DEMO_TOKEN"))
+    try:
+        port = int(os.environ.get("AFN_PORT", env_file.get("AFN_PORT", "8000")))
+    except (TypeError, ValueError):
+        raise ValueError("AFN_PORT must be between 1 and 65535") from None
+    return runtime_config(token, port)
+
+
+def configure_source(config):
+    destination = SOURCE / RUNTIME_CONFIG
+    if destination.is_symlink():
+        raise ValueError("Choose an extension configuration file without a symlink")
+    if destination.is_file() and destination.read_bytes() == config:
+        return
+
+    with TemporaryDirectory(prefix=".afn-config-", dir=SOURCE) as temporary:
+        staged = Path(temporary) / RUNTIME_CONFIG
+        staged.write_bytes(config)
+        staged.replace(destination)
+
+
+def up_to_date(output, files, config):
     if not output.is_dir() or output.is_symlink():
         return False
     contents = list(output.rglob("*"))
     if any(path.is_symlink() for path in contents):
         return False
-    if {path.relative_to(output) for path in contents if not path.is_dir()} != set(files):
+    if {path.relative_to(output) for path in contents if not path.is_dir()} != {*files, RUNTIME_CONFIG}:
         return False
-    return all(
-        not (output / relative).is_symlink()
-        and (output / relative).read_bytes() == (SOURCE / relative).read_bytes()
+    return (output / RUNTIME_CONFIG).read_bytes() == config and all(
+        (output / relative).read_bytes() == (SOURCE / relative).read_bytes()
         for relative in files
     )
 
 
-def build_extension(output):
+def build_extension(output, config):
     if output.is_symlink():
         raise ValueError("Choose a package directory without a symlink")
     output = output.resolve()
@@ -64,8 +94,8 @@ def build_extension(output):
         raise ValueError("Choose a destination outside the extension source folder")
     files = source_files()
     if output.exists():
-        if up_to_date(output, files):
-            return len(files)
+        if up_to_date(output, files, config):
+            return len(files) + 1
         raise FileExistsError("Choose a new output directory for the updated extension")
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -75,16 +105,26 @@ def build_extension(output):
             destination = staged / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(SOURCE / relative, destination)
+        (staged / RUNTIME_CONFIG).write_bytes(config)
         staged.rename(output)
-    return len(files)
+    return len(files) + 1
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    destination = parser.add_mutually_exclusive_group()
+    destination.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    destination.add_argument(
+        "--configure-source", action="store_true", help="Configure an existing unpacked install from extension/"
+    )
     args = parser.parse_args()
     try:
-        count = build_extension(args.output)
+        config = config_from_environment()
+        if args.configure_source:
+            configure_source(config)
+            print(f"Unpacked Chromium source configured: {SOURCE}")
+            return
+        count = build_extension(args.output, config)
     except (OSError, ValueError) as error:
         parser.exit(1, f"{error}\n")
     print(f"Unpacked Chromium extension: {args.output.resolve()} ({count} files)")

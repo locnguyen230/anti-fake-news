@@ -9,7 +9,7 @@ from fastapi import Request
 
 from app.config import Settings
 from app.errors import InputError
-from app.predictor import ModelNotReadyError, Predictor, PredictorInput
+from app.predictor import BundlePredictor, ModelNotReadyError, Predictor, PredictorInput
 from app.schemas import PredictionResult
 
 
@@ -37,6 +37,12 @@ class InferenceAdapter:
     @property
     def ready(self) -> bool:
         return self._state is ModelState.READY and self._predictor is not None
+
+    @property
+    def decision_threshold(self) -> float | None:
+        with self._lock:
+            provider = self._predictor
+            return provider.decision_threshold if isinstance(provider, BundlePredictor) else None
 
     def initialize(self, factory: Callable[[], Predictor]) -> None:
         """The lifecycle owner must supply a compatible, ready-to-use provider.

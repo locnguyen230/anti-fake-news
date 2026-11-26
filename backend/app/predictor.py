@@ -37,6 +37,10 @@ class BundlePredictor:
         self._bundle: ModelBundle | None = bundle
         self._encoder: ImageEncoder | None = encoder
 
+    @property
+    def decision_threshold(self) -> float | None:
+        return self._bundle.threshold if self._bundle is not None else None
+
     def close(self) -> None:
         encoder, self._encoder = self._encoder, None
         self._bundle = None

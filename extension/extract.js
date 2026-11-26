@@ -1,3 +1,33 @@
+function sourceUrl(value) {
+  try {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    url.username = '';
+    url.password = '';
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+export async function readArticle(tab) {
+  const url = sourceUrl(tab?.url);
+  const unavailable = { url, title: '', text: '', candidateImages: [], extraction: 'unavailable' };
+  if (!url || !Number.isInteger(tab.id)) return unavailable;
+
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: extractArticle,
+    });
+    const article = injection?.result;
+    if (article && sourceUrl(article.url) === url) return { ...article, url };
+  } catch {
+    // Restricted pages and closed or navigated tabs use manual entry.
+  }
+  return unavailable;
+}
+
 // Chrome serializes this function into the tab's isolated world.
 export function extractArticle() {
   const EXCLUDED = 'nav, aside, footer, script, style, template, noscript, [hidden], [aria-hidden="true"], [role="navigation"], [role="complementary"]';
