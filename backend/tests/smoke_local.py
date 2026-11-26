@@ -2,7 +2,8 @@
 
 Run from backend with python tests/smoke_local.py. Use --bundle and
 --metadata-sha256 to verify an AFN-049 frozen, non-fixture multimodal bundle.
-Use --bundle and --candidate to smoke-test a real candidate in demo mode.
+Use --bundle and --candidate to smoke-test a real candidate. Add --production
+and --metadata-sha256 to exercise the production candidate configuration.
 """
 
 import argparse
@@ -43,8 +44,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("real", "mock"), default="real")
     parser.add_argument("--bundle", type=Path, help="Path to a real multimodal bundle")
-    parser.add_argument("--candidate", action="store_true", help="Run a real candidate in demo mode")
-    parser.add_argument("--metadata-sha256", help="Independent metadata.json digest from AFN-049")
+    parser.add_argument("--candidate", action="store_true", help="Expect a real candidate bundle")
+    parser.add_argument("--production", action="store_true", help="Run a pinned candidate in production")
+    parser.add_argument("--metadata-sha256", help="Expected SHA-256 of the exact metadata.json")
     args = parser.parse_args()
     if (args.candidate or args.metadata_sha256) and not args.bundle:
         parser.error("--candidate and --metadata-sha256 require --bundle")
@@ -52,6 +54,8 @@ def main() -> None:
         parser.error("--bundle requires real mode")
     if args.bundle and not (args.candidate or args.metadata_sha256):
         parser.error("A frozen bundle requires --metadata-sha256 from AFN-049")
+    if args.production and not (args.bundle and args.candidate and args.metadata_sha256):
+        parser.error("--production requires --bundle, --candidate and --metadata-sha256")
     metadata = None
     if args.bundle:
         try:
@@ -70,7 +74,7 @@ def main() -> None:
     environment = os.environ.copy()
     token = secrets.token_urlsafe(32)
     runtime = "test" if args.mode == "mock" else "demo"
-    if metadata and not args.candidate:
+    if metadata and (not args.candidate or args.production):
         runtime = "production"
     environment.update(
         AFN_HOST="127.0.0.1",
@@ -79,6 +83,7 @@ def main() -> None:
         AFN_PREDICTOR_MODE=args.mode,
         AFN_DEMO_TOKEN=token,
         AFN_MODEL_METADATA_SHA256=args.metadata_sha256 or "",
+        AFN_ALLOW_CANDIDATE_MODEL="true" if args.production else "false",
         AFN_MAX_REQUEST_BYTES=str(12 * 1024 * 1024),
         HF_HUB_OFFLINE="1",
     )

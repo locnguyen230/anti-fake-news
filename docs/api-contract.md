@@ -18,7 +18,7 @@ Health/predict/lỗi có các header `X-AFN-Inference-Mode: real|mock`,
 Real báo `not_loaded` khi chưa có cấu hình bundle và đường dẫn mặc định không tồn tại,
 `ready` sau khi nạp và warm-up thành công, hoặc `error` khi startup/provider lỗi.
 Với `AFN_ENVIRONMENT=production`, Backend chỉ nhận kết nối sau khi bundle thật
-đã freeze vượt qua kiểm tra checksum và warm-up.
+vượt qua kiểm tra checksum và warm-up. Bundle `candidate` cần được bật rõ ràng.
 Mock báo `ready` khi predictor giả lập sẵn sàng.
 Không trả token, đường dẫn artifact hay thông điệp ngoại lệ nội bộ.
 

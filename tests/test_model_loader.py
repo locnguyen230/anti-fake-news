@@ -139,8 +139,15 @@ def test_failed_startup_is_sanitized_and_never_installs_mock(bundle, failure, mo
         assert str(path) not in health.text + response.text and TOKEN not in health.text + response.text
 
 
-@pytest.mark.parametrize("artifact", ["missing", "fixture", "candidate", "wrong-digest", "frozen"])
-def test_production_starts_only_with_the_pinned_frozen_bundle(bundle, artifact):
+@pytest.mark.parametrize(("artifact", "allow_candidate", "ready"), [
+    ("missing", True, False),
+    ("fixture", True, False),
+    ("candidate", False, False),
+    ("candidate", True, True),
+    ("wrong-digest", True, False),
+    ("frozen", False, True),
+])
+def test_production_requires_a_pinned_real_bundle(bundle, artifact, allow_candidate, ready):
     path, _, constructors = bundle
     metadata_path = path / "metadata.json"
     metadata = json.loads(metadata_path.read_bytes())
@@ -150,7 +157,7 @@ def test_production_starts_only_with_the_pinned_frozen_bundle(bundle, artifact):
             evidence_kind="VALIDATION_ONLY",
             model_id=metadata["model_id"].removesuffix("-fixture"),
             model_version=metadata["model_version"].removesuffix("-fixture"),
-            status="candidate" if artifact == "candidate" else "frozen",
+            status="frozen" if artifact == "frozen" else "candidate",
         )
         metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
     digest = sha256(metadata_path.read_bytes()).hexdigest().upper()
@@ -161,8 +168,9 @@ def test_production_starts_only_with_the_pinned_frozen_bundle(bundle, artifact):
     app = create_app(Settings(
         _env_file=None, environment="production", demo_token=TOKEN,
         model_artifact_path=path, model_metadata_sha256=digest,
+        allow_candidate_model=allow_candidate,
     ))
-    if artifact != "frozen":
+    if not ready:
         with pytest.raises(RuntimeError, match="Production startup failed"):
             with TestClient(app):
                 pytest.fail("The server must not start with an invalid production artifact")

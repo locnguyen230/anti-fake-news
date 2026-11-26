@@ -19,7 +19,8 @@ hơn `.env`. Mọi giá trị không hợp lệ đều chặn khởi động tr�
 | `AFN_DEMO_TOKEN` | *(trống)* | Secret cục bộ (`SecretStr`, ẩn khỏi `repr`/JSON). Để trống sẽ từ chối mọi `POST /predict` với `401 invalid_token` (kể cả `mock`). |
 | `AFN_EXTENSION_ORIGIN` | *(trống)* | Khớp chính xác `^chrome-extension://[a-p]{32}$` (không wildcard `*`, không `http`/`https`, không path). Để trống sẽ không cấp CORS cho bất kỳ origin nào. |
 | `AFN_MODEL_ARTIFACT_PATH` | `artifacts/model` | Đường dẫn thư mục bundle Multimodal (tương đối theo gốc repo hoặc tuyệt đối), ẩn khỏi `repr`. Trỏ tới `backend/artifacts/multimodal` khi chạy candidate thật. |
-| `AFN_MODEL_METADATA_SHA256` | *(trống)* | SHA-256 đã được duyệt của `metadata.json`. Bắt buộc ở `production`, cùng với token và bundle trạng thái `frozen`. |
+| `AFN_MODEL_METADATA_SHA256` | *(trống)* | SHA-256 của `metadata.json` trong bundle được chọn. Bắt buộc ở `production` cùng với token. |
+| `AFN_ALLOW_CANDIDATE_MODEL` | `false` | Cho phép bundle thật trạng thái `candidate` ở production khi đặt `true`. |
 | `AFN_MAX_REQUEST_BYTES` | `12582912` (12 MiB) | Trần toàn bộ HTTP body (gồm overhead multipart), phải lớn hơn 10 MiB (`IMAGE_MAX_BYTES`). |
 | `HF_HOME` | `cache/huggingface` | Biến môi trường Hugging Face (ngoài `AFN_`). Trỏ tới thư mục cha của `hub/` chứa cache CLIP đã ghim. |
 | `HF_HUB_OFFLINE` | *(khuyến nghị `1` ở demo)* | `ClipImageEncoder` ở Backend luôn gọi `offline=True` (`local_files_only=True`); đặt `HF_HUB_OFFLINE=1` tăng cường bảo vệ không gọi mạng. |
