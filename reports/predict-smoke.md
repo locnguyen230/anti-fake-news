@@ -1,5 +1,11 @@
 # Báo cáo Smoke `POST /predict` với artifact Multimodal thật — AFN-037
 
+> **Cập nhật AFN-052/053, 26/11/2026:** Đã bổ sung lại hook parity còn thiếu và chạy
+> 32 mẫu Validation thật PASS. Không còn blocker thiếu dữ liệu local. Số đo mới
+> có harness tái chạy tại [performance.md](performance.md); regression và trạng thái
+> freeze/review tại [backend-final-check.md](backend-final-check.md). Phần dưới giữ
+> nguyên bằng chứng lịch sử, không phải số đo của lượt kiểm tra mới.
+
 Ngày đo: **26/11/2026** (giờ địa phương). Tài liệu ghi nhận kết quả nối đường suy luận thật
 `POST /predict` với gói ứng viên Multimodal (`is_fixture: false`, `status: candidate`) và
 encoder CLIP ViT-B/32 đã ghim chạy hoàn toàn cục bộ, offline.

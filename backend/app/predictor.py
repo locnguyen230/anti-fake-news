@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
+from pathlib import Path
 
 from fastapi import Request
 from pydantic import Field
@@ -61,6 +62,23 @@ class BundlePredictor:
         except PreprocessingError:
             raise InputError(inputs.request_id) from None
         return PredictionResult.model_validate(result, from_attributes=True)
+
+
+def load_for_parity(bundle_dir: Path | str) -> BundlePredictor:
+    """Offline CLI factory using the serving loader, including checks and warm-up.
+
+    Explicit test environment permits synthetic bundles. Neither .env nor AFN_*
+    deployment settings select another provider or bypass bundle validation.
+    The caller owns close(); this factory never trains or alters an artifact.
+    """
+    from app.config import Settings
+    from app.model_loader import load_predictor
+
+    return load_predictor(Settings(
+        _env_file=None, _env_prefix="AFN_PARITY_",
+        environment="test", predictor_mode="real", model_artifact_path=Path(bundle_dir),
+        model_metadata_sha256=None, allow_candidate_model=False,
+    ))
 
 
 def get_predictor(request: Request) -> Predictor:

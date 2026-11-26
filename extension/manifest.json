@@ -13,6 +13,15 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "https://www.reuters.com/*",
+    "https://*.reutersmedia.net/*",
+    "https://cloudfront-us-east-2.images.arcpublishing.com/*",
+    "https://media.cnn.com/*",
+    "https://ichef.bbci.co.uk/*",
+    "https://dims.apnews.com/*",
+    "https://i.guim.co.uk/*",
+    "https://www.aljazeera.com/*",
+    "https://i.abcnewsfe.com/*"
   ]
 }
