@@ -116,23 +116,32 @@ async function checkPublisherExtraction(page) {
     <p>Reporting by Danielle Broadway; Editing by David Gregorio</p>
     <p>Thomson Reuters</p>
     <p>Danielle Broadway covers entertainment and legal proceedings.</p>`;
+  const reutersRelated = `<div class="regular-article-layout-module__related__abc">
+    <ul data-testid="StoryCollection"><li><div data-testid="MediaStoryCard" class="story-card">
+      <p data-testid="Body" class="media-story-card-module__description__abc">
+        The annual Macy's Thanksgiving Day Parade is the subject of a different article.
+      </p>
+    </div></li></ul>
+  </div>`;
   async function readReuters(body) {
     await page.route(reutersUrl, route => route.fulfill({ contentType: 'text/html', body }), { times: 1 });
     await page.goto(reutersUrl);
     return page.evaluate(extractArticle);
   }
-  const reuters = await readReuters(`<main class="article-module__main__1N9VH"><article>
-    <div data-testid="article-body">
+  const reuters = await readReuters(`<main><article data-testid="Article">
+    <div class="article-module__main__1N9VH">
+    <div data-testid="ArticleBody"><div class="article-body-module__content__abc">
       <div data-testid="paragraph-0">Andy Taylor played guitar in Duran Duran.</div>
-      <div class="article-body__paragraph__abc"><p>The band paid tribute to its former member.</p></div>
+      <p data-testid="promo-box">Sign up here.</p>
+      <div class="article-body-module__paragraph__abc">The band paid tribute to its former member.</div>
       ${reutersFooter}
-    </div>
-  </article></main>`);
+    </div></div></div>
+  </article></main>${reutersRelated}`);
   assert.equal(reuters.text, 'Andy Taylor played guitar in Duran Duran.\n\nThe band paid tribute to its former member.');
-  const reutersWithoutBody = await readReuters(`<main class="article-module__main__1N9VH"><article>
-    <div data-testid="article-body"><div style="display:none" data-testid="paragraph-0">Hidden text.</div></div>
+  const reutersWithoutBody = await readReuters(`<main><article data-testid="Article">
+    <div data-testid="ArticleBody"><div style="display:none" data-testid="paragraph-0">Hidden text.</div></div>
     ${reutersFooter}
-  </article></main>`);
+  </article>${reutersRelated}</main>`);
   assert.equal(reutersWithoutBody.extraction, 'empty');
   assert.equal(reutersWithoutBody.text, '');
 

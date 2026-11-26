@@ -32,10 +32,12 @@ export async function readArticle(tab) {
 export function extractArticle() {
   const publishers = [
     [['reuters.com'], [
+      '[data-testid="ArticleBody"] [class*="article-body-module__content__"]',
+      '[data-testid="ArticleBody"]',
+      '[class*="article-body-module__content__"]',
       '[data-testid="article-body"]',
       '[class*="article-body__content__"]',
       '[itemprop~="articleBody"]',
-      '[data-testid="Body"]',
       '.article-module__main__1N9VH',
       '[class*="article-module__main__"]',
       'main article',
@@ -62,10 +64,12 @@ export function extractArticle() {
     '[data-testid^="ad-"]', '[data-testid="related-topics"]', '[data-component="links-block"]',
   ];
   if (reuters) {
-    proseSelectors.push('[class*="article-body__paragraph__"]');
+    proseSelectors.push('[class*="article-body-module__paragraph__"]', '[class*="article-body__paragraph__"]');
     excludedSelectors.push(
       '[data-testid*="newsletter" i]', '[class*="newsletter-signup" i]',
       '[data-testid^="author-" i]', '[class*="author-bio" i]', '[class*="author-card" i]',
+      '[data-testid="StoryCollection"]', '[data-testid="MediaStoryCard"]',
+      '[class*="regular-article-layout-module__related__"]', '[data-testid="promo-box"]',
     );
   }
   const EXCLUDED = excludedSelectors.join(', ');
