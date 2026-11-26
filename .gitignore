@@ -26,3 +26,15 @@ afn-runtime-config.json
 *.safetensors
 *.h5
 *.hdf5
+
+# Versioned release metadata, including the ML and QA signoffs.
+/release/model-freeze.json.tmp
+!/release/model-freeze.json
+!/release/data-manifest-index.json
+
+# Local handover bundles and per-sample Test files.
+/backend/artifacts/text_only/
+/backend/artifacts/image_only/
+/backend/artifacts/multimodal/
+/data/private/
+/reports/test-predictions.jsonl
