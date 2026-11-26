@@ -11,6 +11,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.config import Settings
 from app.cors import LocalCORSMiddleware
+from app.lifespan import SanitizedLifespanMiddleware
 from app.errors import InputError
 from app.validation import RequestLimitsMiddleware, error_response, validate_request
 from app.inference_adapter import InferenceAdapter, create_adapter, get_inference_adapter
@@ -46,8 +47,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         adapter = await run_in_threadpool(create_adapter, runtime)
         if runtime.environment == "production" and not adapter.ready:
             raise RuntimeError(
-                "Production startup failed. Check the frozen multimodal bundle, "
-                "its approved metadata SHA-256, and the pinned offline CLIP cache."
+                "Production startup failed. Check the multimodal bundle, "
+                "metadata SHA-256, candidate setting, and pinned offline CLIP cache."
             )
         app.state.settings = runtime
         app.state.inference_adapter = adapter
@@ -63,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                   lifespan=lifespan)
     app.add_middleware(RequestLimitsMiddleware)
     app.add_middleware(LocalCORSMiddleware)
+    app.add_middleware(SanitizedLifespanMiddleware)
 
     @app.exception_handler(ModelNotReadyError)
     async def model_not_ready(request: Request, exc: ModelNotReadyError) -> JSONResponse:

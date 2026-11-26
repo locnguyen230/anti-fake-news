@@ -13,17 +13,6 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Private inputs and generated model assets; retain source code and manifests.
-data/raw/
-data/private/
-raw_data/
-private_data/
-artifacts/
-!/backend/artifacts/
-/backend/artifacts/*
-!/backend/artifacts/metadata.schema.json
-weights/
-checkpoints/
 cache/
 *.pkl
 *.pickle
@@ -35,7 +24,3 @@ cache/
 *.safetensors
 *.h5
 *.hdf5
-
-# Generated packages for local handoff.
-/release/extension/
-/release/backend.zip

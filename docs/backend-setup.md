@@ -79,9 +79,11 @@ hash cấu hình processor với bundle.
 
 Sao chép `.env.example` thành `.env` tại gốc gói. Giữ
 `AFN_ENVIRONMENT=production`, `AFN_PREDICTOR_MODE=real` và
-`AFN_HOST=127.0.0.1`. Điền SHA-256 đã duyệt từ AFN-049 vào
+`AFN_HOST=127.0.0.1`. Điền SHA-256 của bundle được triển khai vào
 `AFN_MODEL_METADATA_SHA256`, tạo token riêng cho Backend và nhập cùng token
 trong Extension. Có thể đặt biến môi trường thay cho sửa file.
+Đặt `AFN_EXTENSION_ORIGIN=chrome-extension://<id>` theo ID của bản Extension
+đã cài trong `chrome://extensions` để Backend cho phép request từ Extension.
 Từ thư mục gốc đã giải nén:
 
 ```powershell
@@ -98,8 +100,10 @@ Kỳ vọng HTTP 200, `contract_version: 0.2.0`, `model_ready: true`,
 ở AFN-038/044. [Hợp đồng API](https://github.com/ngnsusinn/anti-fake-news/blob/main/docs/api-contract.md)
 
 Production dừng khởi động nếu thiếu token, bundle hoặc cache CLIP,
-hay nếu bundle sai hash, chưa freeze hoặc warm-up lỗi. Đối chiếu cấu
-hình, bundle và cache trước khi khởi động lại.
+hay nếu bundle sai hash hoặc warm-up lỗi. Mặc định production yêu cầu
+bundle `frozen`. Để chủ động triển khai bundle thật ở trạng thái
+`candidate`, đặt `AFN_ALLOW_CANDIDATE_MODEL=true` và ghim SHA-256 của
+chính `metadata.json` trong bundle đó. Dùng biên bản AFN-049 cho bản đã ký.
 
 ## 4. Smoke và khởi động lại offline
 

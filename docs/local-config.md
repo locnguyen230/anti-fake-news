@@ -19,7 +19,8 @@ hơn `.env`. Mọi giá trị không hợp lệ đều chặn khởi động tr�
 | `AFN_DEMO_TOKEN` | *(trống)* | Secret cục bộ (`SecretStr`, ẩn khỏi `repr`/JSON). Để trống sẽ từ chối mọi `POST /predict` với `401 invalid_token` (kể cả `mock`). |
 | `AFN_EXTENSION_ORIGIN` | *(trống)* | Khớp chính xác `^chrome-extension://[a-p]{32}$` (không wildcard `*`, không `http`/`https`, không path). Để trống sẽ không cấp CORS cho bất kỳ origin nào. |
 | `AFN_MODEL_ARTIFACT_PATH` | `artifacts/model` | Đường dẫn thư mục bundle Multimodal (tương đối theo gốc repo hoặc tuyệt đối), ẩn khỏi `repr`. Trỏ tới `backend/artifacts/multimodal` khi chạy candidate thật. |
-| `AFN_MODEL_METADATA_SHA256` | *(trống)* | SHA-256 đã được duyệt của `metadata.json`. Bắt buộc ở `production`, cùng với token và bundle trạng thái `frozen`. |
+| `AFN_MODEL_METADATA_SHA256` | *(trống)* | SHA-256 của `metadata.json` trong bundle được chọn. Bắt buộc ở `production` cùng với token. |
+| `AFN_ALLOW_CANDIDATE_MODEL` | `false` | Cho phép bundle thật trạng thái `candidate` ở production khi đặt `true`. |
 | `AFN_MAX_REQUEST_BYTES` | `12582912` (12 MiB) | Trần toàn bộ HTTP body (gồm overhead multipart), phải lớn hơn 10 MiB (`IMAGE_MAX_BYTES`). |
 | `HF_HOME` | `cache/huggingface` | Biến môi trường Hugging Face (ngoài `AFN_`). Trỏ tới thư mục cha của `hub/` chứa cache CLIP đã ghim. |
 | `HF_HUB_OFFLINE` | *(khuyến nghị `1` ở demo)* | `ClipImageEncoder` ở Backend luôn gọi `offline=True` (`local_files_only=True`); đặt `HF_HUB_OFFLINE=1` tăng cường bảo vệ không gọi mạng. |
@@ -71,9 +72,10 @@ Quá trình khởi động chạy qua FastAPI `lifespan` (`backend/app/main.py` 
 ## 4. Vệ sinh log và thông điệp lỗi
 
 - Launcher `python -m app` (`backend/app/__main__.py`) chạy Uvicorn với `access_log=False`; khi cấu hình sai, chỉ in thông báo chung `"Invalid AFN configuration; check .env and environment values."` (ẩn giá trị đầu vào nhờ `hide_input_in_errors=True`).
+- `SanitizedLifespanMiddleware` thay message lỗi startup/shutdown bằng thông báo cố định trước khi Uvicorn ghi log; startup lỗi vẫn không nhận request và launcher thoát thất bại. Không bật traceback để chẩn đoán artifact.
 - `GET /health` và mọi phản hồi lỗi `400/401/413/503` chỉ trả schema cố định (`HealthResponse`, `ErrorResponse`) kèm header `Cache-Control: no-store`.
 - Không ghi hoặc trả lại nội dung bài báo, byte ảnh, tên tệp upload, `AFN_DEMO_TOKEN`, đường dẫn máy cục bộ, thông điệp ngoại lệ nội bộ hay stack trace.
-- `.env`, `backend/artifacts/multimodal/`, `cache/` và `data/private/` nằm trong `.gitignore`.
+- Không đưa `.env`, artifact, cache hoặc dữ liệu private vào gói bàn giao. Kiểm tra danh sách tệp trước khi stage; checkout này bảo vệ dữ liệu/model qua Git local excludes.
 
 ## 5. Cách chạy cục bộ (Windows x64 / Python 3.13)
 

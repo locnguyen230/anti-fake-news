@@ -6,9 +6,9 @@ See [ML environment](docs/ml-environment.md) for shared dependencies and CLIP ch
 
 ## Production
 
-Follow the [Backend deployment guide](docs/backend-setup.md) to prepare the real
-Multimodal bundle approved in AFN-049 and the pinned CLIP cache. Copy `.env.example`
-to `.env`, supply `AFN_DEMO_TOKEN` and the approved `AFN_MODEL_METADATA_SHA256`,
+Follow the [Backend deployment guide](docs/backend-setup.md) to prepare a real
+Multimodal bundle and the pinned CLIP cache. Copy `.env.example`
+to `.env`, supply `AFN_DEMO_TOKEN` and `AFN_MODEL_METADATA_SHA256`,
 then run `python -m app` from `backend/`. The production server starts only after
 checking the bundle and warming up the real model. The [Chromium extension](docs/extension-setup.md)
 uses the loopback Backend and the same token.
@@ -63,7 +63,8 @@ Explicit CLI bind options override settings. Keep this local service on loopback
 | AFN_DEMO_TOKEN | Required for production startup and for authenticated predictions |
 | AFN_EXTENSION_ORIGIN | Unset; enforcement remains #38 |
 | AFN_MODEL_ARTIFACT_PATH | Multimodal bundle directory, relative to repo or absolute. The deployment template uses backend/artifacts/multimodal |
-| AFN_MODEL_METADATA_SHA256 | Approved metadata.json SHA-256, required in production |
+| AFN_MODEL_METADATA_SHA256 | SHA-256 of the exact bundle metadata.json, required in production |
+| AFN_ALLOW_CANDIDATE_MODEL | False by default. Set to true to deploy a pinned real candidate |
 | AFN_MAX_REQUEST_BYTES | Enforced 12 MiB total body default; configurable above 10 MiB |
 
 POST /predict requires X-Demo-Token, UUID, nonblank text (<=50,000 code points), optional

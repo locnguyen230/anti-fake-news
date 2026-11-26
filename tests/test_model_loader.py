@@ -20,6 +20,26 @@ IMAGE = Path(__file__).parent / "fixtures" / "pages" / "synthetic.png"
 TOKEN = "loader-test-only"
 
 
+def test_parity_factory_uses_serving_loader_and_ignores_deployment_settings(bundle, monkeypatch):
+    from ml.inference_parity import resolve_factory
+    from app.predictor import PredictorInput
+
+    path, encoder, constructors = bundle
+    monkeypatch.setenv("AFN_ENVIRONMENT", "production")
+    monkeypatch.setenv("AFN_PREDICTOR_MODE", "mock")
+    monkeypatch.setenv("AFN_MODEL_METADATA_SHA256", "0" * 64)
+    factory = resolve_factory("app.predictor:load_for_parity")
+    predictor = factory(path, None, None)
+    try:
+        assert constructors == [True] and encoder.calls == 1  # offline + serving warm-up
+        result = predictor.predict(PredictorInput(request_id=uuid4(), text="Synthetic news article",
+                                                   image_bytes=IMAGE.read_bytes()))
+        assert result.model_id.endswith("-fixture")
+    finally:
+        predictor.close()
+    assert predictor._bundle is None and predictor._encoder is None
+
+
 @pytest.fixture
 def bundle(tmp_path, ml_fixture, ml_config, fake_encoder, monkeypatch):
     dataset = load_dataset(ml_fixture["manifest"], ml_fixture["split"], ml_fixture["image_root"])
@@ -45,6 +65,30 @@ def bundle(tmp_path, ml_fixture, ml_config, fake_encoder, monkeypatch):
 def service(path, environment="test"):
     return create_app(Settings(_env_file=None, environment=environment, predictor_mode="real",
                                model_artifact_path=path, demo_token=TOKEN))
+
+
+def test_restart_recovers_from_inference_failure_without_reusing_closed_provider(bundle, monkeypatch):
+    path, encoder, constructors = bundle
+    encode = encoder.encode
+    app = service(path)
+    with TestClient(app) as client:
+        first_provider = app.state.inference_adapter._predictor
+        assert predict(client, str(uuid4())).status_code == 200
+
+        def fail(images):
+            raise RuntimeError("private runtime failure")
+
+        monkeypatch.setattr(encoder, "encode", fail)
+        assert predict(client, str(uuid4())).status_code == 503
+        assert not client.get("/health").json()["model_ready"]
+        assert first_provider._bundle is None and first_provider._encoder is None
+    assert app.state.predictor is None
+    monkeypatch.setattr(encoder, "encode", encode)
+    with TestClient(app) as client:
+        assert app.state.inference_adapter._predictor is not first_provider
+        assert client.get("/health").json()["model_ready"]
+        assert predict(client, str(uuid4())).status_code == 200
+    assert constructors == [True, True]
 
 
 def predict(client, request_id, text="Synthetic news article"):
@@ -139,8 +183,15 @@ def test_failed_startup_is_sanitized_and_never_installs_mock(bundle, failure, mo
         assert str(path) not in health.text + response.text and TOKEN not in health.text + response.text
 
 
-@pytest.mark.parametrize("artifact", ["missing", "fixture", "candidate", "wrong-digest", "frozen"])
-def test_production_starts_only_with_the_pinned_frozen_bundle(bundle, artifact):
+@pytest.mark.parametrize(("artifact", "allow_candidate", "ready"), [
+    ("missing", True, False),
+    ("fixture", True, False),
+    ("candidate", False, False),
+    ("candidate", True, True),
+    ("wrong-digest", True, False),
+    ("frozen", False, True),
+])
+def test_production_requires_a_pinned_real_bundle(bundle, artifact, allow_candidate, ready):
     path, _, constructors = bundle
     metadata_path = path / "metadata.json"
     metadata = json.loads(metadata_path.read_bytes())
@@ -150,7 +201,7 @@ def test_production_starts_only_with_the_pinned_frozen_bundle(bundle, artifact):
             evidence_kind="VALIDATION_ONLY",
             model_id=metadata["model_id"].removesuffix("-fixture"),
             model_version=metadata["model_version"].removesuffix("-fixture"),
-            status="candidate" if artifact == "candidate" else "frozen",
+            status="frozen" if artifact == "frozen" else "candidate",
         )
         metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
     digest = sha256(metadata_path.read_bytes()).hexdigest().upper()
@@ -161,8 +212,9 @@ def test_production_starts_only_with_the_pinned_frozen_bundle(bundle, artifact):
     app = create_app(Settings(
         _env_file=None, environment="production", demo_token=TOKEN,
         model_artifact_path=path, model_metadata_sha256=digest,
+        allow_candidate_model=allow_candidate,
     ))
-    if artifact != "frozen":
+    if not ready:
         with pytest.raises(RuntimeError, match="Production startup failed"):
             with TestClient(app):
                 pytest.fail("The server must not start with an invalid production artifact")
