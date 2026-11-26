@@ -6,6 +6,7 @@ the split check, the no-refit guarantee, the one-run rule and the outputs.
 
 import csv
 import json
+import re
 import subprocess
 
 import numpy as np
@@ -31,7 +32,7 @@ def setup(tmp_path, ml_fixture, ml_config, fake_encoder):
     root = tmp_path / "repo"
     (root / "configs").mkdir(parents=True)
     config = root / "configs" / "experiment.yaml"
-    config.write_text(DEFAULT_EXPERIMENT_CONFIG.read_text().replace("status: proposed", "status: locked"))
+    config.write_text(re.sub(r"(?m)^status: \w+$", "status: locked", DEFAULT_EXPERIMENT_CONFIG.read_text()))
     (root / "ml").mkdir()
     (root / "ml" / "pinned.py").write_text("VALUE = 1\n")
     dataset = load_dataset(ml_fixture["manifest"], ml_fixture["split"], ml_fixture["image_root"])
