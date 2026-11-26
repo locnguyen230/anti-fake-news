@@ -17,7 +17,11 @@ METADATA_SCHEMA = REPO_ROOT / "backend" / "artifacts" / "metadata.schema.json"
 
 
 def load_predictor(settings: Settings) -> BundlePredictor:
-    bundle = load_bundle(settings.model_artifact_path, expected_configuration="multimodal")
+    bundle = load_bundle(
+        settings.model_artifact_path,
+        expected_configuration="multimodal",
+        expected_metadata_sha256=settings.model_metadata_sha256,
+    )
     schema = json.loads(METADATA_SCHEMA.read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema, format_checker=Draft202012Validator.FORMAT_CHECKER)
     if not validator.is_valid(bundle.metadata):
@@ -25,8 +29,10 @@ def load_predictor(settings: Settings) -> BundlePredictor:
     is_fixture = bundle.metadata["is_fixture"]
     if any(value.endswith("-fixture") != is_fixture for value in (bundle.model_id, bundle.model_version)):
         raise BundleError("bundle identifiers disagree with fixture metadata")
-    if is_fixture and settings.environment == "demo":
+    if is_fixture and settings.environment not in ("dev", "test"):
         raise BundleError("a fixture bundle requires dev or test")
+    if settings.environment == "production" and bundle.metadata["status"] != "frozen":
+        raise BundleError("production requires a frozen bundle")
 
     encoder = ClipImageEncoder(offline=True)
     check_encoder_identity(bundle, encoder.identity, encoder.dim)
