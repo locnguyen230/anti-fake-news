@@ -3,7 +3,7 @@
   "status": "BLOCKED",
   "evidence_kind": "NOT_RUN",
   "as_of": "2026-11-26",
-  "repo_revision": "56e299e6630621aa3f60c3e2a190b625a7390767",
+  "repo_revision": "b94deff881fa66842e32dbf03848cb0789a045f9",
   "issue": "https://github.com/ngnsusinn/anti-fake-news/issues/47",
   "candidate_context_not_test_evidence": {
     "dataset": "ml-v2",
@@ -13,7 +13,11 @@
     "manifest_sha256": "a42af272426dc73019dd1f7b010de9feb1f3fb67f8b2740c672f6a34a237f44a",
     "locked_split_sha256": "81058045c8397ed9cce8645267466e79a2fc346606865e05ade9b303b77b9c1f",
     "freeze_status": "draft",
-    "protocol_status": "proposed"
+    "protocol_status": "locked",
+    "validation_run_id": "20261126T024649Z",
+    "ml_signoff": "0xDa1Vu",
+    "qa_signoff": null,
+    "record_sha256": "7afd69ded04c225beb6537295555178d901383983a19b552d6e27c10aac983f8"
   },
   "n_test": null,
   "n_groups": null,
@@ -21,10 +25,22 @@
   "overall": {
     "n": null,
     "outcomes": {
-      "both_correct": {"count": null, "fraction": null},
-      "both_wrong": {"count": null, "fraction": null},
-      "text_only_correct": {"count": null, "fraction": null},
-      "multimodal_only_correct": {"count": null, "fraction": null}
+      "both_correct": {
+        "count": null,
+        "fraction": null
+      },
+      "both_wrong": {
+        "count": null,
+        "fraction": null
+      },
+      "text_only_correct": {
+        "count": null,
+        "fraction": null
+      },
+      "multimodal_only_correct": {
+        "count": null,
+        "fraction": null
+      }
     }
   },
   "strata": null,
@@ -32,11 +48,32 @@
   "confusion_matrices": null,
   "provenance": null,
   "blockers": [
-    {"issue": "AFN-004", "owner": "Integration", "reason": "protocol not locked"},
-    {"issue": "AFN-046", "owner": "DATA/QA", "reason": "final dataset summary not approved"},
-    {"issue": "AFN-049", "owner": "ML/QA", "reason": "freeze draft, ML and QA signoffs missing"},
-    {"issue": "AFN-050", "owner": "ML", "reason": "final Test predictions and metrics absent at inspected revision"}
+    {
+      "issue": "AFN-046",
+      "owner": "DATA/QA",
+      "reason": "candidate summary merged; QA approval still required"
+    },
+    {
+      "issue": "AFN-049",
+      "owner": "QA",
+      "reason": "ML signoff recorded; QA signoff and handover verification pending"
+    },
+    {
+      "issue": "AFN-050",
+      "owner": "ML",
+      "reason": "final Test predictions and metrics absent at inspected revision"
+    }
   ],
-  "fixture_verification": {"evidence_kind": "FIXTURE_ONLY", "tests_passed": 14, "test_result_is_not_research": true},
-  "limitations": ["No final Test payload or predictions inspected", "No research counts inferred from validation confusion matrices", "Quality flags require QA approval; missing metadata is unknown", "Correctness means agreement with source labels, not fact verification", "Disagreement does not establish image causality"]
+  "fixture_verification": {
+    "evidence_kind": "FIXTURE_ONLY",
+    "tests_passed": 14,
+    "test_result_is_not_research": true
+  },
+  "limitations": [
+    "No final Test payload or predictions inspected",
+    "No research counts inferred from validation confusion matrices",
+    "Quality flags require QA approval; missing metadata is unknown",
+    "Correctness means agreement with source labels, not fact verification",
+    "Disagreement does not establish image causality"
+  ]
 }

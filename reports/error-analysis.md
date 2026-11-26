@@ -3,7 +3,7 @@
 **26/11/2026 — BLOCKED / NOT RUN (Test cuối).** Báo cáo chuẩn bị cho RQ3, không phải kết quả đánh giá mô hình. Phạm vi độc lập đã triển khai và kiểm thử trên fixture; chưa mở Test, chưa phân tích dự đoán Test thật.
 
 - DATA: `locnguyen230`; reviewer: QA `dangnguyen0512`; ưu tiên P0; hạn 14/12/2026.
-- Issue: [AFN-047](https://github.com/ngnsusinn/anti-fake-news/issues/47); snapshot đọc: `56e299e6630621aa3f60c3e2a190b625a7390767`.
+- Issue: [AFN-047](https://github.com/ngnsusinn/anti-fake-news/issues/47); snapshot đọc: `b94deff881fa66842e32dbf03848cb0789a045f9`.
 - Truy vết: RQ3, FR-08, DESIGN §10.4 theo issue; quy tắc thực tế tại [giao thức AFN-004](../docs/experiment-protocol.md#mở-test-và-phân-tích). Số mục DESIGN trong issue có thể khác bản tài liệu hiện hành.
 - Nguồn: [AFN-050 evaluator](../ml/evaluate_test.py), [freeze](../release/model-freeze.json), [biên bản](pre-test-signoff.md), [data card](../docs/data-card.md), [kết quả mô hình](model-results.md).
 
@@ -11,9 +11,9 @@
 
 | Đầu vào | Trạng thái tại snapshot | Owner / điều kiện |
 |---|---|---|
-| AFN-004 | Closed – Not planned; protocol `proposed` | Integration `fulord26` khóa protocol |
-| AFN-046 | Open; bản báo cáo dự thảo chưa có trên main | DATA/QA duyệt số liệu cùng freeze |
-| AFN-049 | Closed – Not planned; `draft`, hai signoffs null | ML `0xDa1Vu` và QA xác nhận cùng canonical record hash |
+| AFN-004 | Protocol `locked` | Đã merge [#111](https://github.com/ngnsusinn/anti-fake-news/pull/111) |
+| AFN-046 | [Báo cáo ứng viên](final-data-summary.md) đã merge | DATA/QA duyệt số liệu và bàn giao hash báo cáo |
+| AFN-049 | Freeze `draft`; ML `0xDa1Vu` đã ký run `20261126T024649Z` | QA xác minh gói bàn giao và ký cùng canonical record hash |
 | AFN-050 | Closed – Not planned; code evaluator có, chưa có predictions/metrics Test | ML bàn giao kết quả thật sau freeze hợp lệ |
 | Cờ chất lượng trước Test | Chưa có gói metadata đã duyệt được truy xuất | DATA/QA bàn giao cờ và hash độc lập |
 
@@ -21,7 +21,7 @@ Bản ứng viên `ml-v2` có 153 Train, 32 Validation và 33 dòng Test khóa, 
 
 Hash Train/Validation manifest khai báo: `a42af272426dc73019dd1f7b010de9feb1f3fb67f8b2740c672f6a34a237f44a`.
 Hash split CSV ẩn ID Test khai báo: `81058045c8397ed9cce8645267466e79a2fc346606865e05ade9b303b77b9c1f`.
-Hai hash trên thuộc hồ sơ nháp, chưa được dùng làm bằng chứng ký số liệu cuối. Không đọc payload Test hoặc chạy evaluator để tạo số liệu thay thế. Không dùng số liệu Validation làm kết quả Test.
+Hai hash trên nằm trong hồ sơ đã có chữ ký ML. Hồ sơ còn chờ QA xác minh gói bàn giao và ký. Không đọc payload Test hoặc chạy evaluator để tạo số liệu thay thế. Không dùng số liệu Validation làm kết quả Test.
 
 ## 2. Phương pháp (RQ3)
 
@@ -47,18 +47,18 @@ Khi có dữ liệu: tổng bốn nhóm = n_test; số bất đồng = chỉ Tex
 | Source | `gossipcop`, `politifact`; thêm tổ hợp source × label | Không đồng nhất source với publisher |
 | Publisher | Có metadata / unknown | Không tự suy diễn hostname là publisher đã xác minh |
 | Event | `event_id` đã duyệt hoặc unknown | Không dùng group_id thay cho event_id |
-| Group | `group_id` từ split khóa | Các mẫu trong cùng group không nhất thiết độc lập |
+| Group | Ghép theo `group_id` từ split khóa, báo cáo theo kích thước group | Các mẫu trong cùng group có thể phụ thuộc nhau |
 | Text truncation | `text_truncated` true/false từ AFN-050 | Cờ theo preprocessing, không chứng minh lỗi do cắt văn bản |
 | Text quality | `short_body`, `boilerplate`, `wrong_article`, `paywall`, `unsupported_language` | Chỉ lấy cờ theo metadata QA đã duyệt; không suy ra từ dự đoán |
 | Image quality | `low_resolution`, `logo_or_placeholder`, `irrelevant_image`, `unverified_image` | Chỉ lấy cờ theo metadata QA đã duyệt; không tự phân tích ảnh Test |
 
-Các cờ text/image có thể chồng lấp, vì vậy không cộng các hàng cờ thành N. `unknown` nghĩa là chưa có metadata; `none_recorded` nghĩa là có bản ghi cờ nhưng danh sách rỗng, không bảo đảm mẫu sạch. Không loại mẫu vì cờ lỗi. Bảng cờ được lập theo tiêu chí đã chốt trước khi xem dự đoán, lưu riêng tư; hash do QA bàn giao. Nếu cần rà định tính sau Test, dùng cùng rubric, ghi số ca rà được gồm cả ca đúng, không tuning hay loại mẫu; chỉ xuất mô tả tổng hợp được phép. Không xuất URL, text, ảnh, sample ID hoặc tên group/event gốc. Group/event dùng alias cục bộ; QA rà nguy cơ tái định danh từ các ô nhỏ trước công bố. Không gọi kết quả là kiểm chứng ảnh–text, không quy mọi bất đồng cho ảnh: khác biệt đặc trưng, tham số và ngưỡng đều có thể góp phần.
+Các cờ text/image có thể chồng lấp, vì vậy không cộng các hàng cờ thành N. `unknown` nghĩa là chưa có metadata; `none_recorded` nghĩa là có bản ghi cờ nhưng danh sách rỗng, không bảo đảm mẫu sạch. Không loại mẫu vì cờ lỗi. Bảng cờ được lập theo tiêu chí đã chốt trước khi xem dự đoán, lưu riêng tư; hash do QA bàn giao. Nếu cần rà định tính sau Test, dùng cùng rubric, ghi số ca rà được gồm cả ca đúng, không tuning hay loại mẫu; chỉ xuất mô tả tổng hợp được phép. Không xuất URL, text, ảnh, sample ID hoặc tên group/event gốc. Báo cáo nhóm theo kích thước và đếm có/thiếu metadata publisher hoặc event. QA rà nguy cơ tái định danh từ các ô nhỏ trước công bố. Không gọi kết quả là kiểm chứng ảnh–text, không quy mọi bất đồng cho ảnh: khác biệt đặc trưng, tham số và ngưỡng đều có thể góp phần.
 
 ## 4. Công cụ và cách tái lập
 
-File hỗ trợ: `scripts/analyze_errors.py` (stdlib Python, chỉ đọc; xuất hai file trong thư mục mới); `tests/data/test_analyze_errors.py`. Không thay đổi interface ML. Schema đầu ra `afn-error-analysis-v1` là schema riêng của báo cáo DATA, không phải giao diện AFN-050.
+File hỗ trợ: `scripts/analyze_errors.py` (tái dùng kiểm tra split và freeze của ML; đọc metadata và dự đoán, xuất hai file trong thư mục mới); `tests/data/test_analyze_errors.py`. Không thay đổi interface ML. Schema đầu ra `afn-error-analysis-v1` là schema riêng của báo cáo DATA, không phải giao diện AFN-050.
 
-Kiểm thử đã thực hiện trong thư mục triển khai:
+Kiểm thử trên dữ liệu tổng hợp:
 
 ```sh
 python -m py_compile scripts/analyze_errors.py
@@ -99,4 +99,4 @@ Script đối chiếu cấu trúc chữ ký/hash theo `ml.freeze.canonical_sha25
 | Chỉ phân tích Test sau AFN-050 | PASS guard trên fixture; Test NOT RUN | Cổng freeze + evidence kind + hash |
 | QA review, Done | BLOCKED | #46, #50, QA review và cờ chất lượng hợp lệ |
 
-Không có checkout Git cục bộ đã đồng bộ; kiểm tra remote qua connector GitHub tại snapshot ghi trên. Không có predictions/metrics thật để chạy end-to-end; chỉ thực thi unit test với fixture trong môi trường Python. Không sửa model, manifest, split, freeze, protocol; không commit/push/PR hoặc ký thay QA. Giữ Issue mở. Nếu dataset/phiên bản thay đổi trước freeze, tái sinh AFN-046 và chỉ phân tích bộ predictions AFN-050 tương ứng; không sửa dữ liệu để cải thiện số liệu Test.
+Đã kiểm thử công cụ bằng fixture tổng hợp. Kết quả Test vẫn ở trạng thái `NOT_RUN` cho đến khi đủ chữ ký, QA duyệt báo cáo AFN-046 và AFN-050 bàn giao đầu ra thật.
