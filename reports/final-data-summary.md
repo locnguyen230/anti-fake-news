@@ -1,14 +1,14 @@
 # AFN-046 · Thống kê dataset/split cho báo cáo cuối
 
-**Ngày đối chiếu:** 26/11/2026 (UTC+7).  
-**Trạng thái:** DRAFT / BLOCKED nghiệm thu cuối — số liệu ứng viên, không phải dataset đã ký freeze.  
-**Owner:** DATA `locnguyen230` · **Reviewer:** QA `dangnguyen0512` (chưa review).  
-**Issue:** [#46](https://github.com/ngnsusinn/anti-fake-news/issues/46) · FR-08, T11.  
-**Revision đối chiếu:** [`56e299e6630621aa3f60c3e2a190b625a7390767`](https://github.com/ngnsusinn/anti-fake-news/commit/56e299e6630621aa3f60c3e2a190b625a7390767).
+**Ngày đối chiếu:** 26/11/2026 (UTC+7).
+**Trạng thái:** DRAFT / BLOCKED nghiệm thu cuối — số liệu ứng viên, không phải dataset đã ký freeze.
+**Owner:** DATA `locnguyen230` · **Reviewer:** QA `dangnguyen0512` (chưa review).
+**Issue:** [#46](https://github.com/ngnsusinn/anti-fake-news/issues/46) · FR-08, T11.
+**Revision đối chiếu:** [`180384b20c8426ef7bc92da7556803c600e4fd9f`](https://github.com/ngnsusinn/anti-fake-news/commit/180384b20c8426ef7bc92da7556803c600e4fd9f).
 
 ## 1. Phạm vi và phiên bản
 
-Báo cáo này hoàn thành phần độc lập của AFN-046 trước Test. Bản chính để mô tả dữ liệu **đã dùng cho lượt Train/Validation của mô hình ứng viên** là `ml-v2`, run `20261125T145232Z` (VALIDATION_ONLY). Bản DATA 352 mẫu chỉ là baseline thu hồi/tiền xử lý để đối soát mất mẫu; không gán thống kê của bản đó cho model. Chưa có phiên bản nghiên cứu cuối được ký.
+Báo cáo này hoàn thành phần độc lập của AFN-046 trước Test. Bản chính để mô tả dữ liệu **đã dùng cho lượt Train/Validation của mô hình ứng viên** là `ml-v2`, run `20261126T024649Z` (VALIDATION_ONLY). Bản DATA 352 mẫu chỉ là baseline thu hồi/tiền xử lý để đối soát mất mẫu; không gán thống kê của bản đó cho model. Chưa có phiên bản nghiên cứu cuối được ký.
 
 | Giai đoạn | Số mẫu | Ý nghĩa / nguồn bằng chứng |
 | --- | ---: | --- |
@@ -113,7 +113,7 @@ Không thiếu lớp hoặc tổ hợp nguồn × nhãn trong Train/Val. PolitiF
 | `data/split/validation.json` | `1af2da1c02d24975c60253f2f4102e246ed67660876a8e02fb5b8fb3d423f720` |
 | `data/split/test.json` | `aec6d2f56af24e7bea9f047cccf6727c657522812fe94ee4266b70ef07118310` |
 
-Các giá trị trên khớp AFN-032 đã bàn giao ngoài repo; file profile chưa xuất hiện trên main tại revision đối chiếu. Không dùng 5 hash legacy thay cho hash model.
+Các giá trị trên khớp [báo cáo AFN-032](data-profile.md) đã merge. Không dùng 5 hash legacy thay cho hash model.
 
 ### 5.2. Dữ liệu ứng viên và hồ sơ freeze nháp
 
@@ -121,17 +121,17 @@ Các giá trị trên khớp AFN-032 đã bàn giao ngoài repo; file profile ch
 | --- | --- | --- |
 | `ml-v2/train-validation/manifest.jsonl` | `a42af272426dc73019dd1f7b010de9feb1f3fb67f8b2740c672f6a34a237f44a` | Hai trường hash trong selected/freeze khớp; QA đã ghi tái dựng đúng byte. Chưa tính lại trên file private. |
 | `ml-v2/train-validation/split.csv` (ẩn ID Test) | `81058045c8397ed9cce8645267466e79a2fc346606865e05ade9b303b77b9c1f` | Tương tự; không phải QA full split hash. |
-| `configs/experiment.yaml` | `11dab478d6838c5872a2446d01d950382a51c4265298319d03cdb472f3aa29a8` | Tính trực tiếp; khớp selected/freeze; proposed. |
-| `configs/selected-models.json` | `1ffa9d7cea176c75a8d7c27063cf7a781b701afea511fcefcca2879ad09d7ea0` | Tính trực tiếp; khớp freeze selection hash. |
-| `release/model-freeze.json` | `e557c01fe22337d767ab1a8658f82ec27f1208febff2ae74721a1d73e894a92a` | Tính trực tiếp trên file draft; không phải record_sha256 có chữ ký. |
+| `configs/experiment.yaml` | `dd4da7bde49905e06d6e89dc9e1a7ff3518bc2cabde424d798bb85d19e805298` | Protocol `locked`; khớp selected và freeze. |
+| `configs/selected-models.json` | `ced48940b30aab32e48625743f4697f92b3728f1f94947c7c1b9db83f5167030` | Khớp hash selection trong freeze. |
+| `release/model-freeze.json` | `9b7d3d1ed529bb9510f3ad9df839e967661e0bb712a5ecaee42359e53206bd5f` | Hash byte của tệp trên Git. ML ký canonical record hash. |
 
-Run ID `20261125T145232Z`, seed 42, split unit `group_id`, ba cấu hình cùng 153 Train/32 Val, 33 Test khóa; run ID, số đếm và hash khai báo khớp. `selected-models.json`: candidate, `test_split.loaded=false`; freeze: draft, protocol proposed, signoffs ML/QA null. `refit_on_train_and_validation=false`. Model version trong freeze nháp: `text-only-20261125-275718e3163b`, `image-only-20261125-cd863cbaabf5`, `multimodal-20261125-105d5f14e79a`. Chưa kiểm byte của artifact, chưa xác nhận bản demo trỏ đúng model đã khóa. Freeze ghi các blocker: protocol proposed, snapshot code chưa sạch hoặc chưa biết, thiếu lệnh Test trong snapshot. Những blocker này thuộc hồ sơ đang ghim; ML cần collect lại trên commit được duyệt. [Biên bản AFN-049](pre-test-signoff.md).
+Run `20261126T024649Z` dùng seed 42, đơn vị split `group_id`, 153 Train, 32 Validation và 33 dòng Test khóa. Selection là `candidate`, `test_split.loaded=false` và `refit_on_train_and_validation=false`. Phiên bản bundle: `text-only-20261126-275718e3163b`, `image-only-20261126-cd863cbaabf5`, `multimodal-20261126-105d5f14e79a`. ML `0xDa1Vu` đã ký canonical record `7afd69ded04c225beb6537295555178d901383983a19b552d6e27c10aac983f8` trên protocol `locked`; hồ sơ vẫn `draft` trong khi chờ QA ký. Đã đối chiếu chữ ký ML với hash canonical từ Git. Byte của gói private và bundle cần QA xác minh theo [biên bản AFN-049](pre-test-signoff.md).
 
 ## 6. Tái lập, kiểm chứng và bàn giao cuối
 
 **Đã thực hiện trong lượt lập báo cáo:** lấy toàn bộ 5 blob legacy tại revision ghim, parse JSON, kiểm coverage ID/mapping/group, tính các bảng nguồn/nhãn/split và SHA-256; kiểm phép tính SHA-256 bằng vector `abc`; đọc selected/freeze/config và so run ID, manifest/split hash, selection/config hash và số mẫu của ba cấu hình. Đối chiếu hash với báo cáo AFN-032 đã bàn giao; kiểm lại tổng hàng và tỷ lệ. Không chạy validator/prepare_dataset/freeze verify trên gói private, không chạy Test hoặc mô hình. Không giả lập dữ liệu để tạo số nghiên cứu.
 
-**Lệnh tái lập đề xuất, chưa chạy trên checkout thật trong lượt này:** tại repo, sau khi merge script AFN-032, ghim revision/hashes và dùng byte Git nguyên bản (lưu ý CRLF trên Windows):
+**Tái lập:** đã chạy `--check` trên 5 tệp đầu vào và báo cáo AFN-032 lấy nguyên byte từ Git. Lệnh dưới dùng revision gốc ghi trong báo cáo AFN-032. Dùng checkout LF nếu cần đối chiếu SHA-256 trên Windows.
 
 ```powershell
 python -m scripts.profile_dataset --mode legacy --manifest data/processed/manifest.json --groups data/processed/groups.json --split-dir data/split --version data-export-pr87 --revision 56e299e6630621aa3f60c3e2a190b625a7390767 --out reports/data-profile.md --check
@@ -140,7 +140,7 @@ Get-FileHash configs/selected-models.json,configs/experiment.yaml,release/model-
 
 Khi có dataset cuối, QA cung cấp ledger quyết định, mapping và split đầy đủ trong vùng riêng; QA chạy `scripts.profile_dataset --mode decisions --qa-private` với các file được duyệt và ghi hash đầu vào. Không dùng CSV đã ẩn ID Test cho chế độ này; không đưa ledger/full split/payload Test cho ML hoặc commit vào Git. Dùng thống kê Test tổng hợp đã được QA phê duyệt để điền số đếm, nguồn, nhãn và nhóm còn thiếu. Đối chiếu đúng gói Train/Val (không phải full ledger) với freeze bằng lệnh ở [pre-test-signoff.md](pre-test-signoff.md); chỉ ML/QA ký và chạy verify khi đủ điều kiện. Không chạy `ml.evaluate_test` cho AFN-046.
 
-### Checklist chốt cuối (chưa ký)
+### Checklist chốt cuối (chờ chữ ký QA)
 
 1. DATA/QA chốt version, manifest accepted/rejected/pending, mapping, split và checksum; xác minh nguồn/publisher/event, lớp/nhóm, lý do loại và phạm vi quyền.
 2. Tái sinh profile AFN-032 trên đúng bản được duyệt. Ghi số đếm và tỷ lệ nguồn × nhãn, từng split và toàn bộ; thống kê Test do QA cung cấp. Đồng bộ data card AFN-033.
@@ -150,10 +150,10 @@ Khi có dataset cuối, QA cung cấp ledger quyết định, mapping và split 
 | Blocker | Owner | Bằng chứng cần bổ sung |
 | --- | --- | --- |
 | AFN-018 chưa nghiệm thu batch thật (closed/not planned) | DATA + QA | Manifest/mapping/split được duyệt, hash và audit |
-| AFN-032 open; profile chưa merge | DATA | PR/profile trên version cuối và QA xác nhận |
+| AFN-032 đã merge profile baseline | DATA | PR/profile trên version cuối và QA xác nhận |
 | AFN-033 closed/not planned | Integration `fulord26` + DATA | Data card/rebuild cập nhật số liệu cuối và giới hạn |
 | AFN-029 audit blocked; provenance/rights | DATA + QA | Metadata/quan hệ đã đối soát; quyết định phạm vi |
-| AFN-049 closed/not planned; freeze draft | ML `0xDa1Vu` + QA + Integration/Backend | Protocol locked, artifact/code khớp, chữ ký ML/QA và verify thành công |
+| AFN-049 closed/not planned; freeze draft | ML `0xDa1Vu` + QA + Integration/Backend | Đã khóa protocol và có chữ ký ML. QA đối chiếu artifact, ký và chạy verify. |
 | Phân bố Test và toàn bộ ML-v2 theo nguồn/nhãn chưa công bố | QA | Bảng aggregate đã duyệt, khớp đúng hash/split |
 
 ## 7. Acceptance criteria và trạng thái
@@ -161,12 +161,12 @@ Khi có dataset cuối, QA cung cấp ledger quyết định, mapping và split 
 | Tiêu chí AFN-046 | Kết quả | Trạng thái |
 | --- | --- | --- |
 | Tạo lại thống kê từ manifest/split đã khóa | Tính trực tiếp legacy; đối chiếu ứng viên, chưa có bản khóa | PARTIAL/BLOCKED |
-| Bảng báo cáo và model cùng version/hash | Hash khai báo `ml-v2` khớp draft và selected; byte private/artifact, chữ ký chưa kiểm | PARTIAL |
+| Bảng báo cáo và model cùng version/hash | Hash khai báo `ml-v2` khớp draft và selected; đã đối chiếu hash chữ ký ML; byte private/artifact chờ QA | PARTIAL |
 | Đếm kèm tỷ lệ, giới hạn nguồn/nhãn/nhóm | Có đầy đủ baseline và Train/Val ứng viên; Test aggregate chi tiết chờ QA | PARTIAL |
 | Liên kết data card, lý do loại, checksum | Đã liên kết, phân biệt mẫu số và phiên bản | PASS (phạm vi tài liệu) |
 | Không đổi split/lọc vì kết quả cuối | Chỉ đọc metadata, không mở Test để tuning, không sửa dữ liệu | PASS (lượt này) |
-| Đối chiếu freeze trước ký | Đã kiểm draft; chưa ký và chưa verify gói thực tế | BLOCKED |
+| Đối chiếu freeze | Chữ ký ML khớp canonical hash; chờ chữ ký QA và xác minh gói thực tế | BLOCKED |
 | Output `reports/final-data-summary.md` | Báo cáo dự thảo này | PASS (phạm vi độc lập) |
 | QA review và nghiệm thu cuối | Chưa có review | NOT RUN |
 
-**Kết luận:** 352 là số mẫu bản DATA gốc, 218 là quy mô ứng viên model hiện tại; chưa có số mẫu nghiên cứu cuối được xác nhận. Báo cáo này không cấp phép mở Test, không chốt số liệu FINAL và không đóng Issue. Bàn giao dự thảo cho QA/ML/Integration đối chiếu; chưa commit/push/PR hoặc sửa bất kỳ file dataset/model nào.
+**Kết luận:** 352 là số mẫu bản DATA gốc, 218 là quy mô ứng viên model hiện tại; chưa có số mẫu nghiên cứu cuối được xác nhận. Báo cáo này không cấp phép mở Test, không chốt số liệu FINAL và không đóng Issue. Bàn giao dự thảo cho QA, ML và Integration đối chiếu.
