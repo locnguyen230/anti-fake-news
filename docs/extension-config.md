@@ -5,7 +5,16 @@ Popup dùng địa chỉ loopback `http://127.0.0.1:8000` theo mặc định và
 30 giây cho phản hồi. Khi bấm **Phân tích**, tiện ích gửi token qua `X-Demo-Token`.
 Đóng gói lại sau khi đổi cổng hoặc token Backend.
 
-Popup lấy nội dung từ tab đang xem và dùng ảnh JPEG/PNG đầu tiên tải được từ bài.
+Popup ưu tiên bố cục riêng của Reuters, CNN, BBC News, AP News, The Guardian,
+Al Jazeera và ABC News. Với các trang khác, popup tìm vùng thân bài theo
+markup HTML và các nhóm đoạn văn hiển thị, lọc menu và vùng liên kết phụ.
+Với Reuters, bộ trích xuất ưu tiên vùng `data-testid="ArticleBody"`, đọc cả
+các đoạn `data-testid="paragraph-…"` và dừng ở dòng ghi công. Các hộp quảng bá
+và thẻ bài liên quan được bỏ qua.
+
+Popup ưu tiên ảnh đại diện từ JSON-LD và Open Graph, rồi thử ảnh đầu bài
+và ảnh trong thân bài, kể cả ảnh khai báo qua `srcset` hoặc tải trễ. Ảnh gửi
+đi là ảnh JPEG/PNG hợp lệ đầu tiên tải được.
 Điểm `fake_score` được hiển thị theo phần trăm cùng nhãn dự đoán của Backend.
 Nếu trang thiếu văn bản hoặc ảnh phù hợp, popup hiển thị thông báo tương ứng.
 
