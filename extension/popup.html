@@ -21,19 +21,7 @@
       </div>
     </div>
 
-    <form id="connection" novalidate>
-      <button id="predict" type="submit" disabled>Phân tích</button>
-      <details id="settings">
-        <summary>Kết nối Backend</summary>
-        <label for="endpoint">Địa chỉ Backend</label>
-        <input id="endpoint" type="url" value="http://127.0.0.1:8000" autocomplete="off">
-        <label for="demo-token">Token demo</label>
-        <input id="demo-token" type="password" autocomplete="off">
-        <label for="timeout">Thời gian chờ (ms)</label>
-        <input id="timeout" type="number" value="30000" min="1000" max="120000" step="1">
-      </details>
-    </form>
-    <button id="manual" type="button" disabled>Phân tích thủ công</button>
+    <button id="predict" type="button" disabled>Phân tích</button>
   </main>
 </body>
 </html>

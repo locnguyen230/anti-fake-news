@@ -1,15 +1,48 @@
-import { readArticle } from './extract.js';
+import { extractArticle } from './extract.js';
 import { SESSION_VERSION, sessionKey } from './modules/session.js';
+
+function sourceUrl(value) {
+  try {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    url.username = '';
+    url.password = '';
+    return url.href;
+  } catch {
+    return null;
+  }
+}
 
 async function openAnalysis(tab) {
   const id = crypto.randomUUID();
   const key = sessionKey(id);
+  const url = sourceUrl(tab.url);
   const session = {
     version: SESSION_VERSION,
     id,
-    tabId: tab?.id ?? null,
-    ...await readArticle(tab),
+    tabId: tab.id ?? null,
+    url,
+    title: '',
+    text: '',
+    candidateImages: [],
+    extraction: 'unavailable',
   };
+
+  if (url && Number.isInteger(tab.id)) {
+    try {
+      const [injection] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: extractArticle,
+      });
+      const article = injection?.result;
+      if (article && sourceUrl(article.url) === url) {
+        const { title, text, candidateImages, extraction } = article;
+        Object.assign(session, { title, text, candidateImages, extraction });
+      }
+    } catch {
+      // Restricted pages and closed or navigated tabs use manual entry.
+    }
+  }
 
   let stored = false;
   try {
@@ -36,7 +69,6 @@ async function openAnalysis(tab) {
     }
   } catch {
     if (stored) await chrome.storage.session.remove(key);
-    throw Error('Could not open the analysis tab');
   }
 }
 
@@ -46,13 +78,5 @@ async function removeAnalysis(tabId) {
   if (key) await chrome.storage.session.remove([ownerKey, key]);
 }
 
-chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (sender.url !== chrome.runtime.getURL('popup.html') || message?.type !== 'open-manual-analysis') return;
-
-  const source = Number.isInteger(message.tabId)
-    ? chrome.tabs.get(message.tabId).catch(() => null)
-    : Promise.resolve(null);
-  source.then(openAnalysis).then(() => respond(true), () => respond(false));
-  return true;
-});
+chrome.action.onClicked.addListener(tab => openAnalysis(tab).catch(() => {}));
 chrome.tabs.onRemoved.addListener(tabId => removeAnalysis(tabId).catch(() => {}));

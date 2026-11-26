@@ -14,6 +14,8 @@ __pycache__/
 htmlcov/
 
 cache/
+/release/extension*/
+afn-runtime-config.json
 *.pkl
 *.pickle
 *.joblib

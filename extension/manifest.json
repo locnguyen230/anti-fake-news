@@ -8,14 +8,9 @@
     "default_title": "Ph\u00e2n t\u00edch b\u00e0i vi\u1ebft",
     "default_popup": "popup.html"
   },
-  "background": {
-    "service_worker": "service-worker.js",
-    "type": "module"
-  },
   "permissions": [
     "activeTab",
-    "scripting",
-    "storage"
+    "scripting"
   ],
   "host_permissions": [
     "http://127.0.0.1/*"

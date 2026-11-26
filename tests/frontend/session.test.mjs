@@ -6,10 +6,11 @@ const sessions = new Map();
 const tabs = new Map();
 const injections = [];
 let nextTabId = 100;
-let onMessage;
+let click;
 let closed;
 let extracted;
 globalThis.chrome = {
+  action: { onClicked: { addListener: handler => { click = handler; } } },
   scripting: {
     async executeScript(details) {
       injections.push(details);
@@ -17,10 +18,7 @@ globalThis.chrome = {
       return [{ result: extracted }];
     },
   },
-  runtime: {
-    getURL: page => 'chrome-extension://afn-test/' + page,
-    onMessage: { addListener: handler => { onMessage = handler; } },
-  },
+  runtime: { getURL: page => 'chrome-extension://afn-test/' + page },
   storage: {
     session: {
       async get(key) { return { [key]: sessions.get(key) }; },
@@ -51,20 +49,12 @@ function article(url, text) {
 
 async function open(tab) {
   const analysisId = nextTabId;
-  assert.equal(await requestManualAnalysis(tab), true);
+  await click(tab);
   const { search } = new URL(tabs.get(analysisId).url);
   return { analysisId, session: await readSession(search) };
 }
 
-function requestManualAnalysis(tab) {
-  tabs.set(tab.id, tab);
-  return new Promise(resolve => {
-    const sender = { url: chrome.runtime.getURL('popup.html') };
-    assert.equal(onMessage({ type: 'open-manual-analysis', tabId: tab.id }, sender, resolve), true);
-  });
-}
-
-test('the popup manual action injects into the source tab and owns each analysis session', async () => {
+test('toolbar handler injects into the clicked tab and owns each analysis session', async () => {
   const firstUrl = 'https://one.example/first';
   const secondUrl = 'https://two.example/second';
   extracted = article(firstUrl, 'First session');
@@ -109,15 +99,15 @@ test('failed or untrackable analysis tab creation leaves no orphan session', asy
   const before = [...sessions.keys()].sort();
   try {
     chrome.tabs.create = async () => { throw Error('Cannot create analysis tab'); };
-    assert.equal(await requestManualAnalysis({ id: 7, url: 'chrome://version/' }), false);
+    await click({ id: 7, url: 'chrome://version/' });
     assert.deepEqual([...sessions.keys()].sort(), before);
 
     chrome.tabs.create = async () => ({});
-    await requestManualAnalysis({ id: 7, url: 'chrome://version/' });
+    await click({ id: 7, url: 'chrome://version/' });
     assert.deepEqual([...sessions.keys()].sort(), before);
 
     chrome.tabs.create = async tab => ({ ...tab, id: 999 });
-    await requestManualAnalysis({ id: 7, url: 'chrome://version/' });
+    await click({ id: 7, url: 'chrome://version/' });
     assert.deepEqual([...sessions.keys()].sort(), before);
   } finally {
     chrome.tabs.create = original;

@@ -2,32 +2,31 @@
 
 ## Đóng gói và cài đặt
 
-1. Từ gốc repo, chạy `python scripts/package_extension.py`. Gói được tạo ở
-   `release/extension`. Sau khi cập nhật mã, có thể dùng
+1. Sau khi cấu hình Backend và cài các phụ thuộc Python của Backend, chạy
+   `python scripts/package_extension.py` từ gốc repo. Script đọc `AFN_DEMO_TOKEN`
+   và `AFN_PORT` từ môi trường hoặc `.env` rồi tạo gói ở `release/extension`.
+   Sau khi cập nhật mã hoặc đổi token, có thể dùng
    `python scripts/package_extension.py --output release/extension-next`.
 2. Mở `chrome://extensions`, bật **Developer mode**, chọn **Load unpacked**,
    rồi chọn thư mục đã tạo. Ghi lại ID hiển thị bên dưới tiện ích.
 3. Origin của gói là `chrome-extension://<ID>`. Dùng giá trị này cho
    `AFN_EXTENSION_ORIGIN` trong cấu hình Backend khi hỗ trợ CORS của #38 đã có.
    Khởi động Backend tại `127.0.0.1`.
-4. Mở một bài viết, bấm biểu tượng **Anti Fake News**, rồi mở **Kết nối Backend**
-   để nhập địa chỉ và token demo. Bấm **Phân tích** để xem điểm `fake_score`
-   theo phần trăm và nhãn **Fake** hoặc **Real**.
-5. Dùng **Phân tích thủ công** để chỉnh văn bản, chọn ảnh hoặc **Kiểm tra kết nối**.
+4. Mở bài viết có ảnh JPEG/PNG, bấm biểu tượng **Anti Fake News** rồi bấm
+   **Phân tích** để xem điểm `fake_score` theo phần trăm và nhãn **Fake** hoặc **Real**.
    Chỉ demo suy luận thật khi
    Backend chạy mode real, đã nạp artifact đã khóa và trả `model_ready=true`.
 
-Gói chỉ lấy mã MV3 và tệp giao diện trong danh sách runtime của script đóng gói.
+Gói unpacked chứa token dùng với Backend cục bộ. Giữ gói trên máy đã cấu hình.
 Xem [kết nối API](extension-config.md) và
 [kịch bản demo](demo-script.md). Phát hành theo mô hình unpacked của dự án.
 
 ## Kiểm tra trên máy khác
 
 Sau khi cài dependencies Backend và Playwright theo
-[hướng dẫn Chromium](extension-w1.md), có thể kiểm tra gói vừa đóng:
+[hướng dẫn Chromium](extension-w1.md), chạy kiểm thử trên gói tạm:
 
 ```powershell
-$env:AFN_EXTENSION_UNPACKED = (Resolve-Path release/extension).Path
 python scripts/test_extension_smoke.py
 ```
 

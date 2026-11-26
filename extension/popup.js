@@ -1,19 +1,12 @@
 import { readArticle } from './extract.js';
-import { ApiError, createApiClient, validateConnection } from './modules/api-client.js';
+import { ApiError, createApiClient } from './modules/api-client.js';
 import { describeApiError } from './modules/error-recovery.js';
 import { createImageSelection } from './modules/image-selection.js';
 import { createRequestLifecycle } from './modules/request-lifecycle.js';
 import { predictionContext } from './modules/result-view.js';
-import { CONNECTION_KEY, readConnection } from './modules/session.js';
 
 const get = id => document.getElementById(id);
-const form = get('connection');
-const settings = get('settings');
-const endpoint = get('endpoint');
-const token = get('demo-token');
-const timeout = get('timeout');
 const predict = get('predict');
-const manual = get('manual');
 const status = get('status');
 const prediction = get('prediction');
 const context = get('context');
@@ -22,14 +15,17 @@ const lifecycle = createRequestLifecycle();
 const images = createImageSelection(() => {});
 const percentage = new Intl.NumberFormat('vi', { style: 'percent', maximumFractionDigits: 2 });
 
-const [[tab], config] = await Promise.all([
-  chrome.tabs.query({ active: true, currentWindow: true }).catch(() => []),
-  readConnection().catch(() => null),
-]);
-if (config) {
-  endpoint.value = config.endpoint;
-  token.value = config.demoToken;
-  timeout.value = config.timeoutMs;
+async function readConnection() {
+  try {
+    const response = await fetch(chrome.runtime.getURL('afn-runtime-config.json'));
+    if (!response.ok) throw Error();
+    const config = await response.json();
+    if (typeof config?.endpoint !== 'string' || typeof config.demoToken !== 'string'
+        || !config.demoToken.trim()) throw Error();
+    return { endpoint: config.endpoint, demoToken: config.demoToken, timeoutMs: 30_000 };
+  } catch {
+    throw new ApiError('package-config');
+  }
 }
 
 addEventListener('pagehide', () => {
@@ -67,36 +63,29 @@ function showPrediction(data, mode) {
   prediction.hidden = false;
 }
 
-form.addEventListener('submit', async event => {
-  event.preventDefault();
+predict.addEventListener('click', async () => {
   if (predict.disabled) return;
   prediction.hidden = true;
-  const connection = { endpoint: endpoint.value, demoToken: token.value.trim(), timeoutMs: timeout.valueAsNumber };
-  if (!connection.demoToken) {
-    settings.open = true;
-    status.textContent = describeApiError(new ApiError('http', { status: 401 }));
-    token.focus();
-    return;
-  }
 
   const request = lifecycle.begin();
   predict.disabled = true;
   status.textContent = 'Đang phân tích bài viết…';
   try {
-    validateConnection(connection);
-    await chrome.storage.session.set({ [CONNECTION_KEY]: connection });
-    settings.open = false;
+    const [[tab], connection] = await Promise.all([
+      chrome.tabs.query({ active: true, currentWindow: true }),
+      readConnection(),
+    ]);
     const article = await readArticle(tab);
     if (!lifecycle.isCurrent(request)) return;
     if (!article.text) {
-      status.textContent = 'Không đọc được nội dung bài viết. Bạn có thể nhập nội dung thủ công.';
+      status.textContent = 'Không đọc được nội dung. Hãy mở một trang bài viết rồi thử lại.';
       return;
     }
 
     const image = await selectImage(article, request.signal);
     if (!lifecycle.isCurrent(request)) return;
     if (!image) {
-      status.textContent = 'Không tải được ảnh JPEG hoặc PNG từ bài viết. Hãy chọn ảnh thủ công.';
+      status.textContent = 'Bài viết cần có ảnh JPEG hoặc PNG để phân tích.';
       return;
     }
     const { data, mode } = await client.predict(connection, {
@@ -109,22 +98,19 @@ form.addEventListener('submit', async event => {
     showPrediction(data, mode);
   } catch (error) {
     if (!lifecycle.isCurrent(request)) return;
-    status.textContent = describeApiError(error);
-    if (error.kind === 'config' || error.status === 401) settings.open = true;
+    if (error.kind === 'package-config' || error.kind === 'config') {
+      status.textContent = 'Thiếu cấu hình tích hợp. Hãy nạp bản tiện ích đã đóng gói.';
+    } else if (error.status === 401 || error.status === 403) {
+      status.textContent = 'Backend từ chối xác thực. Hãy dùng gói tiện ích được tạo từ cấu hình Backend hiện tại.';
+    } else if (error.status === 400) {
+      status.textContent = 'Backend không xử lý được nội dung hoặc ảnh của bài viết này.';
+    } else {
+      status.textContent = describeApiError(error);
+    }
   } finally {
     if (lifecycle.isCurrent(request)) predict.disabled = false;
     lifecycle.finish(request);
   }
 });
 
-manual.addEventListener('click', async () => {
-  manual.disabled = true;
-  const opened = await chrome.runtime.sendMessage({ type: 'open-manual-analysis', tabId: tab?.id }).catch(() => false);
-  if (!opened) {
-    status.textContent = 'Không mở được trang phân tích thủ công. Hãy thử lại.';
-    manual.disabled = false;
-  }
-});
-
 predict.disabled = false;
-manual.disabled = false;

@@ -80,8 +80,9 @@ hash cấu hình processor với bundle.
 Sao chép `.env.example` thành `.env` tại gốc gói. Giữ
 `AFN_ENVIRONMENT=production`, `AFN_PREDICTOR_MODE=real` và
 `AFN_HOST=127.0.0.1`. Điền SHA-256 của bundle được triển khai vào
-`AFN_MODEL_METADATA_SHA256`, tạo token riêng cho Backend và nhập cùng token
-trong Extension. Có thể đặt biến môi trường thay cho sửa file.
+`AFN_MODEL_METADATA_SHA256` và tạo `AFN_DEMO_TOKEN` cho Backend. Đóng gói
+Extension với cùng cấu hình theo [hướng dẫn](extension-setup.md). Có thể đặt
+biến môi trường thay cho sửa file.
 Đặt `AFN_EXTENSION_ORIGIN=chrome-extension://<id>` theo ID của bản Extension
 đã cài trong `chrome://extensions` để Backend cho phép request từ Extension.
 Từ thư mục gốc đã giải nén:

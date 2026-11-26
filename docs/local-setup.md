@@ -21,7 +21,7 @@ Nếu repo và `.venv` đã có, chạy từ gốc repo và dùng lại môi tr�
 
 ## 2. Khởi động Backend ở chế độ mock
 
-Tạo một token cho máy local bằng lệnh dưới đây. Dán giá trị vào dòng `AFN_DEMO_TOKEN=` trong `.env`, rồi dùng cùng giá trị đó trong Extension. Giữ `.env` và token trên máy của bạn.
+Tạo một token cho máy local bằng lệnh dưới đây. Dán giá trị vào dòng `AFN_DEMO_TOKEN=` trong `.env` để Backend và script đóng gói Extension cùng đọc. Giữ `.env` và gói Extension trên máy của bạn.
 
 ```powershell
 & $AfnPython -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -48,17 +48,17 @@ Trong terminal khác, chạy `curl.exe -i http://127.0.0.1:8000/health`. Kỳ v�
 
 ## 3. Nạp Extension và thử với một bài mẫu
 
-1. Mở `chrome://extensions`, bật **Developer mode**, chọn **Load unpacked**, rồi chọn thư mục `extension/` trong repo. Sau khi sửa mã, bấm **Reload** trên thẻ tiện ích.
+1. Chạy `& $AfnPython scripts/package_extension.py`. Mở `chrome://extensions`, bật **Developer mode**, chọn **Load unpacked**, rồi chọn thư mục `release/extension/`.
 2. Từ gốc repo, mở một terminal riêng, khai báo lại `$AfnPython` và chạy lệnh dưới đây để phục vụ trang mẫu qua loopback.
 
    ```powershell
    & $AfnPython -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/pages
    ```
 
-3. Mở [bài mẫu](http://127.0.0.1:8765/article.html) và bấm biểu tượng **Anti Fake News**. Trong **Kết nối Backend**, điền địa chỉ `http://127.0.0.1:8000` và token ở bước 2.
-4. Bấm **Phân tích** để popup lấy văn bản và ảnh từ bài mẫu. Backend mock trả điểm `42%` và nhãn `Real` kèm dòng **Kết quả giả lập**. Dùng **Phân tích thủ công** để sửa văn bản, chọn ảnh khác hoặc kiểm tra kết nối.
+3. Mở [bài mẫu](http://127.0.0.1:8765/article.html) và bấm biểu tượng **Anti Fake News**.
+4. Bấm **Phân tích** để popup lấy văn bản và ảnh từ bài mẫu. Backend mock trả điểm `42%` và nhãn `Real` kèm dòng **Kết quả giả lập**.
 
-Để tạo thư mục cài đặt độc lập từ gốc repo, chạy `& $AfnPython scripts/package_extension.py`, rồi chọn `release/extension/` khi **Load unpacked**. Nếu thư mục đầu ra đã chứa bản cũ, dùng `--output cache/extension-next` để tạo bản mới.
+Nếu thư mục đầu ra đã chứa bản cũ, dùng `--output cache/extension-next` để tạo bản mới rồi nạp thư mục đó.
 
 ## 4. Chạy ML và suy luận bằng bundle
 
@@ -137,12 +137,12 @@ $env:AFN_PLAYWRIGHT_PATH = Join-Path $AfnPlaywrightDir 'node_modules/playwright'
 & $AfnPython scripts/test_extension_smoke.py
 ```
 
-Runner mặc định nạp `extension/`. Để kiểm thư mục đóng gói, đặt `$env:AFN_EXTENSION_UNPACKED = (Resolve-Path release/extension).Path` trước khi chạy.
+Runner tự tạo các gói tạm với cổng và token của Backend kiểm thử.
 
 | Hiện tượng | Cách kiểm tra |
 | --- | --- |
 | Extension báo mất kết nối | Mở `/health` trực tiếp. Kiểm Backend đang chạy và địa chỉ trong Extension dùng `127.0.0.1` cùng cổng. Nếu 8000 đã bận, đổi `AFN_PORT` trong `.env`, khởi động lại và cập nhật địa chỉ. |
-| `POST /predict` trả 401 | Kiểm token đã cấu hình ở Backend và nhập đúng giá trị trong tab. Khởi động lại Backend sau khi sửa `.env`. |
+| `POST /predict` trả 401 | Kiểm `AFN_DEMO_TOKEN` của Backend rồi đóng gói và nạp lại Extension với cùng cấu hình. Khởi động lại Backend nếu đã sửa `.env`. |
 | `POST /predict` trả 400 hoặc 413 | Điền thân bài và chọn JPEG/PNG hợp lệ. Tối đa 50.000 ký tự cho thân bài, 10 MiB và 20 triệu pixel cho ảnh, 12 MiB mặc định cho toàn bộ request. |
 | `/health` trả 200 nhưng báo `model_ready: false` | Kiểm header `X-AFN-Model-State`. Ở mode real, kiểm thư mục bundle, cache CLIP và giá trị `AFN_ENVIRONMENT`. Fixture chỉ được nạp trong `dev` hoặc `test`. |
 | Extension không trích được bài | Thử URL của trang mẫu, mở lại tiện ích sau khi nội dung đã tải, hoặc nhập nội dung và tải ảnh thủ công. |
