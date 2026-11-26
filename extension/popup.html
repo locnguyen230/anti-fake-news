@@ -22,6 +22,55 @@
     </div>
 
     <button id="predict" type="button" disabled>Phân tích</button>
+
+    <details id="analysis-details" hidden>
+      <summary>Xem chi tiết</summary>
+      <section aria-labelledby="input-heading">
+        <h2 id="input-heading">Dữ liệu đã gửi</h2>
+        <dl>
+          <dt>Trang nguồn</dt>
+          <dd id="detail-page"></dd>
+          <dt>Tiêu đề</dt>
+          <dd id="detail-title"></dd>
+        </dl>
+        <p id="detail-text-label"></p>
+        <pre id="detail-text" tabindex="0" aria-labelledby="detail-text-label"></pre>
+        <figure>
+          <img id="detail-image" alt="Ảnh đã gửi để phân tích">
+          <figcaption>
+            <p id="detail-image-info"></p>
+            <p id="detail-image-source"></p>
+          </figcaption>
+        </figure>
+      </section>
+      <section aria-labelledby="pipeline-heading">
+        <h2 id="pipeline-heading">Quy trình phân tích</h2>
+        <ol>
+          <li>Popup lấy tiêu đề và thân bài từ trang đang xem, rồi chọn ảnh JPEG hoặc PNG hợp lệ đầu tiên.</li>
+          <li>Backend xác thực yêu cầu và kiểm tra văn bản, dung lượng và định dạng ảnh.</li>
+          <li id="detail-pipeline-model"></li>
+        </ol>
+      </section>
+      <section aria-labelledby="metrics-heading">
+        <h2 id="metrics-heading">Thông số</h2>
+        <dl>
+          <dt>Mô hình</dt>
+          <dd id="detail-model"></dd>
+          <dt>Phiên bản</dt>
+          <dd id="detail-version"></dd>
+          <dt>Điểm gốc</dt>
+          <dd id="detail-score"></dd>
+          <dt>Ngưỡng Fake</dt>
+          <dd id="detail-threshold"></dd>
+          <dt>Thời gian dự đoán</dt>
+          <dd id="detail-time"></dd>
+          <dt>Cắt bớt nội dung</dt>
+          <dd id="detail-truncation"></dd>
+          <dt>Mã yêu cầu</dt>
+          <dd id="detail-request"></dd>
+        </dl>
+      </section>
+    </details>
   </main>
 </body>
 </html>

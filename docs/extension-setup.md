@@ -14,6 +14,7 @@
    Khởi động Backend tại `127.0.0.1`.
 4. Mở bài viết có ảnh JPEG/PNG, bấm biểu tượng **Anti Fake News** rồi bấm
    **Phân tích** để xem điểm `fake_score` theo phần trăm và nhãn **Fake** hoặc **Real**.
+   Chọn **Xem chi tiết** để xem văn bản và ảnh đã gửi, quy trình xử lý và thông số lượt dự đoán.
    Chỉ demo suy luận thật khi
    Backend chạy mode real, đã nạp artifact đã khóa và trả `model_ready=true`.
 

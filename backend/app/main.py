@@ -117,6 +117,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise ModelNotReadyError
         elapsed_ms = max(0, int((perf_counter() - start) * 1000))
         response.headers.update(inference_headers(adapter))
+        if predictor is adapter and (threshold := adapter.decision_threshold) is not None:
+            response.headers["X-AFN-Decision-Threshold"] = str(threshold)
         return PredictResponse(**result.model_dump(), request_id=inputs.request_id,
                                processing_time_ms=elapsed_ms)
 

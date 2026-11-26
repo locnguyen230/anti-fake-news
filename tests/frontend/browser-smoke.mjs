@@ -85,7 +85,7 @@ async function openPopup(cdp, extensionId, source, popupPath) {
         sessionId,
         message: JSON.stringify({
           id, method: 'Runtime.evaluate',
-          params: { expression: '(' + fn + ')()', returnByValue: true },
+          params: { expression: '(' + fn + ')()', returnByValue: true, awaitPromise: true },
         }),
       }).catch(finish);
     });
@@ -130,6 +130,7 @@ try {
   const popup = await openPopup(cdp, id, source, manifest.action.default_popup);
 
   assert.deepEqual(await popup.evaluate(() => [...document.querySelectorAll('button, input, summary, a')]
+    .filter(control => !control.closest('[hidden]'))
     .map(control => [control.tagName, control.textContent.trim()])), [['BUTTON', 'Phân tích']]);
   assert.equal(await popup.evaluate(() => document.querySelector('#prediction').hidden), true);
 
@@ -144,6 +145,49 @@ try {
   } else {
     assert.equal(result.hidden, true);
     assert.match(result.status, outcome === 'unauthorized' ? /từ chối xác thực/u : /chưa sẵn sàng/u);
+    assert.equal(await popup.evaluate(() => document.querySelector('#analysis-details').hidden), true);
+  }
+  if (!result.hidden) {
+    assert.deepEqual(await popup.evaluate(() => {
+      const details = document.querySelector('#analysis-details');
+      return [details.hidden, details.open, details.querySelector('summary').textContent];
+    }), [false, false, 'Xem chi tiết']);
+    await popup.evaluate(() => document.querySelector('#analysis-details summary').click());
+    const trace = await popup.evaluate(async () => {
+      const get = id => document.getElementById(id).textContent;
+      const image = document.querySelector('#detail-image');
+      const bytes = await (await fetch(image.src)).arrayBuffer();
+      return {
+        open: document.querySelector('#analysis-details').open,
+        title: get('detail-title'), text: get('detail-text'), imageSource: get('detail-image-source'),
+        imageBytes: Array.from(new Uint8Array(bytes)), model: get('detail-model'),
+        threshold: get('detail-threshold'), score: Number(get('detail-score')),
+        pipeline: get('detail-pipeline-model'), request: get('detail-request'),
+      };
+    });
+    assert.equal(trace.open, true);
+    assert.equal(trace.title, 'Vườn cộng đồng mở buổi đổi hạt giống');
+    assert.match(trace.text, /hạt giống đã ghi tên và trao đổi/u);
+    assert.doesNotMatch(trace.text, /Quảng cáo|Nội dung ẩn|Menu/u);
+    assert.equal(trace.imageSource, origin + '/synthetic.png');
+    assert.deepEqual(Buffer.from(trace.imageBytes), await readFile(join(fixtures, 'synthetic.png')));
+    assert.match(trace.request, /^[0-9a-f-]{36}$/u);
+    if (outcome === 'mock') {
+      assert.equal(trace.model, 'dev-mock-not-a-model');
+      assert.equal(trace.threshold, 'Không áp dụng');
+      assert.match(trace.pipeline, /giả lập.*cố định/u);
+    } else {
+      assert.match(trace.threshold, /^(?:0(?:\.\d+)?|1(?:\.0+)?)$/u);
+      assert.equal(result.verdict, trace.score >= Number(trace.threshold) ? 'Fake' : 'Real');
+      assert.match(trace.pipeline, /TF-IDF.*CLIP.*Hồi quy logistic/u);
+    }
+    assert.equal(await popup.evaluate(() => {
+      document.querySelector('#predict').click();
+      return document.querySelector('#analysis-details').hidden;
+    }), true);
+    await poll(() => popup.evaluate(() => !document.querySelector('#predict').disabled), 'repeat analysis', 50_000);
+    assert.equal(await popup.evaluate(() => document.querySelector('#analysis-details').open), false);
+    console.log('PASS analysis details match the submitted text and image, model pipeline and score');
   }
   console.log('PASS one-click native popup with embedded configuration (' + outcome + ')');
   await popup.close();

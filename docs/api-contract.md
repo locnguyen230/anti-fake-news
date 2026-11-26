@@ -94,6 +94,8 @@ Thời gian monotonic quanh lời gọi Predictor, loại trừ upload và valid
 Mock giữ model_id `dev-mock-not-a-model` và model_version `mock-v0.1.1`.
 Real dùng metadata của bundle đã nạp. Bundle fixture chỉ chạy trong dev/test, với hậu tố
 `-fixture` ở cả model_id và model_version. Xem [vòng đời bundle](model-bundle.md).
+Phản hồi 200 từ bundle có thêm header `X-AFN-Decision-Threshold`. Nhãn là `fake`
+khi `fake_score` lớn hơn hoặc bằng ngưỡng này. Phản hồi giả lập bỏ qua header này.
 
 ## Ví dụ client
 
